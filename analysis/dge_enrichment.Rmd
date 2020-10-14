@@ -1,0 +1,978 @@
+---
+title: "Enrichment Analysis"
+author: "Stephen Pederson"
+date: "`r format(Sys.Date(), '%d %B, %Y')`"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  fig.height = 7,
+  fig.width = 10
+)
+```
+
+```{r packages}
+library(tidyverse)
+library(yaml)
+library(scales)
+library(pander)
+library(glue)
+library(edgeR)
+library(cowplot)
+library(magrittr)
+library(ggrepel)
+library(DT)
+library(msigdbr)
+library(goseq)
+library(reactable)
+library(htmltools)
+library(tidygraph)
+library(ggraph)
+library(corrplot)
+```
+
+```{r options}
+panderOptions("table.split.table", Inf)
+panderOptions("big.mark", ",")
+panderOptions("missing", "")
+theme_set(theme_bw())
+```
+
+```{r extraFuns}
+as_sci <- function(p, d = 2, min = 0.01){
+  fmt <- glue("%.{d}e")
+  new <- character(length(p))
+  new[p > min] <- sprintf(glue("%.{d + 1}f"), p[p > min])
+  new[p <= min] <- sprintf(fmt, p[p <= min])
+  new
+}
+source(here::here("analysis/makeTidyGraph.R"))
+source(here::here("analysis/plotTidyGraph.R"))
+```
+
+
+```{r config}
+config <- here::here("config/config.yml") %>%
+  read_yaml()
+suffix <- paste0(config$tag)
+sp <- config$ref$species %>%
+  str_replace("(^[a-z])[a-z]*_([a-z]+)", "\\1\\2") %>%
+  str_to_title()
+```
+
+```{r importData}
+topTable <- here::here("output/MFM-223_RNASeq.tsv") %>%
+  read_tsv()
+de <- dplyr::filter(topTable, DE)$gene_id
+up <- dplyr::filter(topTable, DE, logFC > 0)$gene_id
+down <- dplyr::filter(topTable, DE, logFC < 0)$gene_id
+dge <- here::here("output/dge.rds") %>%
+  read_rds()
+```
+
+
+# Setup
+
+## Annotations
+
+
+```{r goSummaries}
+minPath <- 5
+goSummaries <- url("https://uofabioinformaticshub.github.io/summaries2GO/data/goSummaries.RDS") %>%
+  readRDS() %>% 
+  mutate(exclude = shortest_path < minPath & !terminal_node)
+```
+
+```{r excludeGoTable, eval=FALSE, echo = FALSE}
+goSummaries %>%
+  group_by(ontology, exclude) %>%
+  tally() %>%
+  pivot_wider(
+    names_from = exclude
+    , values_from = n, 
+    names_prefix = "exclude_"
+  ) %>% 
+  dplyr::rename(include = exclude_FALSE, exclude = exclude_TRUE) %>%
+  bind_rows(
+    tibble(
+      ontology = "Total",
+      include = sum(.$include),
+      exclude = sum(.$exclude)
+    )
+  ) %>%
+  mutate(`% omitted` = percent(exclude / (exclude + include))) %>%
+  rename_all(str_to_title) %>%
+  pander(
+    emphasize.strong.rows = nrow(.),
+    justify = "lrrr",
+    caption = "*GO terms marked for inclusion or exclusion based on the shortest path back to the ontology root, using the complete set of GO terms available*"
+  )
+```
+
+
+```{r msigDB}
+msigDB <- msigdbr(species = "Homo sapiens") %>%
+  dplyr::filter(
+    gs_cat %in% c("H", "C5") | 
+      gs_subcat %in% c("CP:KEGG", "CP:WIKIPATHWAYS", "TFT:GTRD", "TFT:TFT_Legacy"),
+    gs_subcat != "HPO"
+  ) %>%
+  inner_join(
+    dge$genes %>%
+      unchop(entrezid) %>%
+      dplyr::select(
+        entrez_gene = entrezid,
+        gene_id
+      )
+  ) %>%
+  mutate(
+    exclude = gs_exact_source %in% dplyr::filter(goSummaries, exclude)$id
+  )
+nSets <- dplyr::filter(msigDB, !exclude)$gs_id %>% 
+  unique() %>% 
+  length()
+```
+
+```{r setsByGene}
+pathByGene <- msigDB %>%
+  dplyr::filter(gs_cat != "C3", !exclude) %>%
+  split(.$gene_id) %>%
+  lapply(pull, "gs_name")
+tfByGene <- msigDB %>%
+  dplyr::filter(gs_cat == "C3", !exclude) %>%
+  split(.$gene_id) %>%
+  lapply(pull, "gs_name")
+```
+
+```{r genesBySet}
+genesByPath <- msigDB %>%
+  dplyr::filter(gs_cat != "C3", !exclude) %>%
+  split(.$gs_name) %>%
+  lapply(pull, "gene_id")
+genesByTF <- msigDB %>%
+  dplyr::filter(gs_cat == "C3", !exclude) %>%
+  split(.$gs_name) %>%
+  lapply(pull, "gene_id")
+```
+
+
+Gene-set collections were imported from MSigDB version `r dplyr::filter(devtools::session_info("msigdbr")$packages, package == "msigdbr")$loadedversion`.
+For gene-sets derived from GO terms, those with fewer than `r minPath` steps back to each ontology root node were excluded as these were likely to be less informative than those at lower levels of the ontology.
+However, all terms considered as terminal nodes (i.e. with no children) were additionally retained.
+Information regarding the shortest path back to each ontology root was obtained from https://uofabioinformaticshub.github.io/summaries2GO/MakeSummaries.
+
+The gene-sets belonging to Category C3 were associated with transcriptional regulation, whilst the remaining gene-sets were more focussed on processes and pathways.
+Two analyses are performed below, following this distinction.
+
+```{r tabGeneSetSummary}
+msigDB %>%
+  distinct(gs_id, .keep_all = TRUE)  %>% 
+  mutate(
+    gs_cat = as.factor(gs_cat) %>% relevel("H"),
+    gs_subcat = case_when(
+      gs_cat == "H" ~ "HALLMARK",
+      TRUE ~ str_replace(gs_subcat, ":", "\\\\:")
+    )
+  ) %>%
+  group_by(gs_cat, gs_subcat, exclude) %>% 
+  tally() %>%
+  ungroup() %>%
+  pivot_wider(
+    names_from = exclude,
+    values_from = n
+  ) %>%
+  bind_rows(
+    tibble(
+      gs_cat = "Total",
+      gs_subcat = NA,
+      `FALSE` = sum(.$`FALSE`),
+      `TRUE` = sum(.$`TRUE`, na.rm = TRUE)
+    )
+  ) %>%
+  dplyr::rename(
+    Category = gs_cat,
+    Collection = gs_subcat,
+    `Retained Gene-Sets` = `FALSE`,
+    `Discarded Gene Sets`= `TRUE`
+  ) %>%
+  pander(
+    justify = "llrr",
+    emphasize.strong.rows = nrow(.),
+    caption = glue(
+      "*Summary of gene-sets and collections used in this analysis.
+      For a GO term to be retained, it was required to be a terminal node, 
+      or have a shortest path back to the root node of {minPath} or more steps.*"
+    )
+  )
+```
+
+## Assessment of Sampling Bias for DE Genes
+
+```{r pwf}
+pwf <- list(
+  length = topTable %>%
+    arrange(gene_id) %>%
+    with(
+      nullp(
+        DEgenes = structure(DE, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+  ),
+  gc = topTable %>%
+    arrange(gene_id) %>%
+    with(
+      nullp(
+        DEgenes = structure(DE, names = gene_id),
+        bias.data = gc_content,
+        plot.fit = FALSE
+      )
+    )
+)
+```
+
+```{r plotPWF, fig.height=5, fig.width=8, fig.cap = "*Comparison of gene length and GC content on the probability of a gene being considered as DE*"}
+par(mfrow = c(1, 2))
+plotPWF(pwf$length, xlab = "Gene Length", ylim = c(0, 0.13), log = "x")
+plotPWF(pwf$gc, xlab = "GC content", ylim = c(0, 0.13))
+par(mfrow = c(1, 1))
+```
+
+As some bias has been previously identified in this dataset, a probability weight function for consideration of a gene as DE was estimated using the standard `goseq` workflow.
+Both GC content and gene length were investigated as potential sources of bias with gene length demonstrating the largest influence.
+This was subsequently included as an offset for sampling bias in all enrichment analyses looking **within** the set of DE genes.
+
+For enrichment analysis of up and down-regulated genes separately, probability weight functions were also generated for both subsets of DE genes
+
+```{r directionalPWF, fig.height = 5, fig.cap = "*The influence of gene length on the probability of being considered DE, for both up and down-regulated genes*"}
+upPwf <- topTable %>%
+    arrange(gene_id) %>%
+    with(
+      nullp(
+        DEgenes = structure(DE & logFC > 0, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+    )
+downPwf <- topTable %>%
+    arrange(gene_id) %>%
+    with(
+      nullp(
+        DEgenes = structure(DE & logFC < 0, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+    )
+par(mfrow = c(1, 2))
+plotPWF(upPwf, main = "Up-regulated genes", log = "x", ylim = c(0, 0.1))
+plotPWF(downPwf, main = "Down-regulated genes", log = "x", ylim = c(0, 0.1))
+par(mfrow = c(1, 1))
+```
+
+
+
+# Pathway and Process Focussed Analysis
+
+## All DE Genes
+
+```{r pathGoseqRes}
+pathGoseqRes <- goseq(pwf$length, gene2cat = pathByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(sum(topTable$DE) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.01
+```
+
+Using an FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(pathGoseqRes, FDR < alpha))` pathway & process-related gene sets were considered as enriched within the set of `r length(de)` previously-defined DE genes.
+
+```{r tabPathGoSeq, echo = FALSE}
+cp <- glue(
+  "All enriched pathway & process gene-sets to an FDR of {alpha}. DE Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment."
+) %>%
+  em()
+htmltools::div(
+  class = "enriched-tf",
+  htmltools::div(class = "title", cp),
+  pathGoseqRes %>%
+    dplyr::filter(FDR < alpha) %>%
+    left_join(
+      msigDB, by = c("Category" = "gs_name")
+    ) %>%
+    dplyr::filter(gene_id %in% de) %>%
+    dplyr::select(
+      any_of(colnames(pathGoseqRes)), gene_symbol
+    ) %>%
+    chop(gene_symbol) %>%
+    mutate(
+      gene_symbol = vapply(gene_symbol, paste, character(1), collapse = "; ")
+    ) %>%
+    dplyr::mutate_at(
+      c("Enrichment p", "FDR"), as_sci
+    ) %>%
+    dplyr::rename("Genes" = gene_symbol) %>%
+    reactable(
+      groupBy = "Category", 
+      filterable = TRUE,
+      pageSizeOptions = c(10, 25, 50, 100),
+      showPageSizeOptions = TRUE,
+      defaultPageSize = 25,
+      columns = list(
+        `Number DE` = colDef(aggregate = "unique"),
+        Expected = colDef(aggregate = "unique"),
+        `Gene Set Size` = colDef(aggregate = "unique"),
+        `Enrichment p` = colDef(aggregate = "unique"),
+        FDR = colDef(aggregate = "unique")
+      )
+    ) 
+)
+```
+
+```{r definePathNetwork}
+alpha <- 0.01
+sigPath <- genesByPath %>%
+  .[dplyr::filter(pathGoseqRes, FDR < alpha)$Category] %>%
+  lapply(intersect, de) %>%
+  lapply(function(x){dge$genes[x,]$gene_name}) %>%
+  setNames(
+    names(.) %>%
+      str_replace_all("(HALLMARK|GO|KEGG|WP)_(.+)", "\\2 (\\1)") %>%
+      str_replace_all("_", " ") %>%
+      str_wrap(16)
+  )
+pathGraph <- makeTidyGraph(sigPath, topTable)
+```
+
+```{r plotPathNetwork, echo = FALSE, fig.height=10, fig.cap = glue("*Pathway & process-related gene-sets enriched within the DE genes to an FDR of {alpha}. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.*")}
+set.seed(22)
+plotTidyGraph(pathGraph, palette = "Dark 2", paletteSource = "gr") 
+```
+
+The above visualisation clearly showed:
+
+- The Androgen Response was primarily up-regulated
+- The Early and Late Estrogen Responses were both observed, and largely overlapped
+- Regulation of the MAPK Cascade, *TNF$\alpha$* signalling via *NF$\kappa\beta$* and the EMT transition were highly connected
+- Three connected metabolic processes were also well connected
+
+
+```{r plotPathGS, fig.cap = "*Distribution of up & down-regulated genes within each enriched pathway & process-related gene-set.*"}
+msigDB %>%
+  dplyr::filter(
+    gs_name %in% dplyr::filter(pathGoseqRes, FDR < alpha)$Category
+  ) %>%
+  mutate(
+    direction = case_when(
+      gene_id %in% up ~ "Up",
+      gene_id %in% down ~ "Down",
+      TRUE ~ "Unchanged"
+    ) %>%
+      factor(levels = c("Unchanged", "Down", "Up"))
+  ) %>%
+  group_by(gs_name, direction) %>%
+  tally() %>%
+  ungroup() %>%
+  arrange(desc(n)) %>%
+  mutate(gs_name = fct_inorder(gs_name)) %>%
+  ggplot(
+    aes(gs_name, n, fill = direction)
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    x = "Gene Set",
+    y = "Number of Genes",
+    fill = "Direction"
+  ) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c("grey80", "blue", "red")
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1),
+    panel.grid.major.y = element_blank()
+  )
+```
+
+
+## Up-Regulated Genes
+
+```{r upPathGoseqRes}
+upPathGoseqRes <- goseq(upPwf, gene2cat = pathByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(length(up) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.05
+```
+
+Given the reduced power of the smaller gene-sets used when investigating up & down-regulated genes separately, an FDR of `r alpha` was chosen for this section.
+Using this FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(upPathGoseqRes, FDR < alpha))` pathway & process-related gene sets were considered as enriched within the set of `r length(up)` **up-regulated** genes.
+
+```{r tabUpPathGoSeq, echo = FALSE}
+cp <- glue(
+  "All enriched pathway & process gene-sets to an FDR of {alpha} in the subset of up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment."
+) %>%
+  em()
+htmltools::div(
+  class = "enriched-tf",
+  htmltools::div(class = "title", cp),
+  upPathGoseqRes %>%
+    dplyr::filter(FDR < alpha) %>%
+    left_join(
+      msigDB, by = c("Category" = "gs_name")
+    ) %>%
+    dplyr::filter(gene_id %in% up) %>%
+    dplyr::select(
+      any_of(colnames(upPathGoseqRes)), gene_symbol
+    ) %>%
+    chop(gene_symbol) %>%
+    mutate(
+      gene_symbol = vapply(gene_symbol, paste, character(1), collapse = "; ")
+    ) %>%
+    dplyr::mutate_at(
+      c("Enrichment p", "FDR"), as_sci
+    ) %>%
+    dplyr::rename(
+      `Number Up-Regulated` = `Number DE`,
+      "Genes" = gene_symbol
+    ) %>%
+    reactable(
+      groupBy = "Category", 
+      filterable = TRUE,
+      pageSizeOptions = c(10, 25, 50, 100),
+      showPageSizeOptions = TRUE,
+      defaultPageSize = 25,
+      columns = list(
+        `Number Up-Regulated` = colDef(aggregate = "unique"),
+        Expected = colDef(aggregate = "unique"),
+        `Gene Set Size` = colDef(aggregate = "unique"),
+        `Enrichment p` = colDef(aggregate = "unique"),
+        FDR = colDef(aggregate = "unique")
+      )
+    ) 
+)
+```
+
+```{r defineUpPathNetwork}
+alpha <- 0.05
+minSize <- 5
+sigPath <- genesByPath %>%
+  .[dplyr::filter(upPathGoseqRes, FDR < alpha)$Category] %>%
+  lapply(intersect, up) %>%
+  lapply(function(x){dge$genes[x,]$gene_name}) %>%
+  setNames(
+    names(.) %>%
+      str_replace_all("(HALLMARK|GO|KEGG|WP)_(.+)", "\\2 (\\1)") %>%
+      str_replace_all("_", " ") %>%
+      str_wrap(16)
+  ) %>%
+  .[vapply(., length, integer(1)) >= minSize]
+pathGraph <- makeTidyGraph(sigPath, topTable)
+```
+
+```{r plotUpPathNetwork, echo = FALSE, fig.height=10, fig.cap = glue("*Pathway & process-related gene-sets enriched within the set of **up-regulated** genes to an FDR of {alpha}. For genes, node and label size are proportional to the extent of the estimated fold-change. Gene-sets are only included if they contain at least {minSize} up-regulated genes*")}
+set.seed(22)
+plotTidyGraph(pathGraph, palette = "Dark 2", paletteSource = "gr") 
+```
+
+Results for process & pathway analysis in up-regulated genes once again showed
+
+- The large set of interconnected metabolic processes
+- A cluster of related pathways including ER and AR responses, along with *IL2* and *TNF$\alpha$* signalling
+- The MYC Targets pathway was somewhat less connected 
+- Epithelial Development pathways were also less connected
+
+## Down-Regulated Genes
+
+```{r downPathGoseqRes}
+downPathGoseqRes <- goseq(downPwf, gene2cat = pathByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(length(down) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.05
+```
+
+
+Using an FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(downPathGoseqRes, FDR < alpha))` pathway & process-related gene sets were considered as enriched within the set of `r length(down)` **down-regulated** genes.
+
+
+## Combined Up And Down-Regulated Results
+
+```{r plotDirectionalPathP, fig.height=8, fig.width = 10, fig.cap = glue("*Comparison of p-values for directional enrichment showing that all enrichment results had a clear directional bias. Only pathways with an FDR-adjusted p-value < {alpha} are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. Gene-sets considered as significant in the combined (i.e. non-directional) analysis are marked with an asterisk*")}
+bind_rows(
+  upPathGoseqRes %>% mutate(Direction = "Up"),
+  downPathGoseqRes %>% mutate(Direction = "Down")
+) %>%
+  group_by(Category) %>%
+  dplyr::filter(min(FDR) < alpha) %>%
+  arrange(mean(1/ `Enrichment p`, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(
+    Category = case_when(
+      Category %in% dplyr::filter(pathGoseqRes, FDR<0.05)$Category ~ paste0("*", Category),
+      TRUE ~ Category
+    ),
+    Category = fct_inorder(Category)
+  ) %>%
+  ggplot(aes(Category, -log10(`Enrichment p`), fill = Direction)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 3, linetype = 2) +
+  coord_flip() +
+  labs(y = expression(paste(log[10], "p"))) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c("#0000FFB3", "#FF0000B3")
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1)
+  )
+```
+
+A comparison of the p-values obtained from the individual directional analysis revealed that all pathways showed a clear directional bias, with each pathway only enriched in one direction.
+
+# Regulation-Focussed Analysis
+
+## All DE Genes
+
+```{r tfGoSeqRes}
+tfGoseqRes <- goseq(pwf$length, gene2cat = tfByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(sum(topTable$DE) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.01
+```
+
+Using an FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(tfGoseqRes, FDR < alpha))` transcriptional regulation gene sets were considered as enriched within the set of `r length(de)` previously defined DE genes.
+
+```{r tabTfGoSeq, echo = FALSE}
+alpha <- 0.01
+cp <- glue(
+  "Regulatory gene-sets to an FDR of {alpha}. DE Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment."
+) %>%
+  em()
+htmltools::div(
+  class = "enriched-tf",
+  htmltools::div(class = "title", cp),
+  tfGoseqRes %>%
+    dplyr::filter(FDR < alpha) %>%
+    left_join(
+      msigDB, by = c("Category" = "gs_name")
+    ) %>%
+    dplyr::filter(gene_id %in% de) %>%
+    dplyr::select(
+      any_of(colnames(tfGoseqRes)), gene_symbol
+    ) %>%
+    chop(gene_symbol) %>%
+    mutate(
+      gene_symbol = vapply(gene_symbol, paste, character(1), collapse = "; ")
+    ) %>%
+    dplyr::mutate_at(
+      c("Enrichment p", "FDR"), as_sci
+    ) %>%
+    dplyr::rename("Genes" = gene_symbol) %>%
+    reactable(
+      groupBy = "Category", 
+      filterable = TRUE,
+      pageSizeOptions = c(10, 25, 50, 100),
+      showPageSizeOptions = TRUE,
+      defaultPageSize = 25,
+      columns = list(
+        `Number DE` = colDef(aggregate = "unique"),
+        Expected = colDef(aggregate = "unique"),
+        `Gene Set Size` = colDef(aggregate = "unique"),
+        `Enrichment p` = colDef(aggregate = "unique"),
+        FDR = colDef(aggregate = "unique")
+      )
+    ) 
+)
+```
+
+
+```{r defineTFNetwork}
+alpha <- 0.01
+sigTF <- genesByTF %>%
+  .[dplyr::filter(tfGoseqRes, FDR < alpha)$Category] %>%
+  # .[dplyr::slice(tfGoseqRes, 1:15)$Category] %>%
+  lapply(intersect, de) %>%
+  lapply(function(x){dge$genes[x,]$gene_name}) %>%
+  setNames(
+    names(.) %>%
+      str_replace_all("(HALLMARK|GO|KEGG|WP)_(.+)", "\\2 (\\1)") %>%
+      str_replace_all("_", " ") %>%
+      str_wrap(16)
+  )
+tfGraph <- makeTidyGraph(sigTF, topTable)
+```
+
+```{r plotTFNetwork, echo = FALSE, fig.height=10, fig.cap = glue("*Transcriptional regulatory gene-sets enriched within the DE genes to an FDR of {alpha}. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.*")}
+set.seed(22)
+plotTidyGraph(tfGraph, palette = "Dark 2", paletteSource = "gr") 
+```
+
+Whilst the above network plot initially appears uninformative, it can be seen that genes under regulatory control by GREB1, NFAT and AP1 appear relatively distinct
+
+This is supported by the correlation plot highlighting the trend of co-occurrence for all significant TF motifs.
+LEF1 and TCF4 appear to co-occur a noticeable amount, with CEBP also showing some association with CREL, MEF2 and NKX6.
+
+
+```{r tfCorrplot, fig.height=7, fig.width=7, fig.cap = glue("*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR < {alpha}).*")}
+tfGoseqRes %>%
+  dplyr::filter(FDR < alpha) %>%
+  dplyr::select(gs_name = Category) %>%
+  left_join(msigDB) %>%
+  dplyr::filter(gene_id %in% de) %>%
+  dplyr::mutate(is_in = TRUE) %>%
+  pivot_wider(
+    id_cols = c("gs_name", "gene_symbol", "gene_id"),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %>%
+  dplyr::select(any_of(msigDB$gs_name)) %>%
+  cor() %>%
+  corrplot(
+    type = "upper",
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = "hclust",
+    addshade = "all",
+    col = colorRampPalette(c("blue", "white", "red"))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )
+```
+
+
+## Up-Regulated Genes
+
+
+```{r upTfGoSeqRes}
+upTfGoseqRes <- goseq(upPwf, gene2cat = tfByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(length(up)* numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.05
+```
+
+Given the reduced power of the smaller gene-sets used when investigating up & down-regulated genes separately, an FDR of `r alpha` was again chosen for this section.
+Using this FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(tfGoseqRes, FDR < alpha))` transcriptional regulation gene sets were considered as enriched within the set of `r length(up)` previously defined up-regulated genes.
+
+```{r tabUpTfGoSeq, echo = FALSE}
+cp <- glue(
+  "Regulatory gene-sets to an FDR of {alpha} within the set of {length(up)} up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment."
+) %>%
+  em()
+htmltools::div(
+  class = "enriched-tf",
+  htmltools::div(class = "title", cp),
+  upTfGoseqRes %>%
+    dplyr::filter(FDR < alpha) %>%
+    left_join(
+      msigDB, by = c("Category" = "gs_name")
+    ) %>%
+    dplyr::filter(gene_id %in% up) %>%
+    dplyr::select(
+      any_of(colnames(tfGoseqRes)), gene_symbol
+    ) %>%
+    chop(gene_symbol) %>%
+    mutate(
+      gene_symbol = vapply(gene_symbol, paste, character(1), collapse = "; ")
+    ) %>%
+    dplyr::mutate_at(
+      c("Enrichment p", "FDR"), as_sci
+    ) %>%
+    dplyr::rename(
+      `Number Up` = `Number DE`,
+      "Genes" = gene_symbol
+    ) %>%
+    reactable(
+      groupBy = "Category", 
+      filterable = TRUE,
+      pageSizeOptions = c(10, 25, 50, 100),
+      showPageSizeOptions = TRUE,
+      defaultPageSize = 25,
+      columns = list(
+        `Number Up` = colDef(aggregate = "unique"),
+        Expected = colDef(aggregate = "unique"),
+        `Gene Set Size` = colDef(aggregate = "unique"),
+        `Enrichment p` = colDef(aggregate = "unique"),
+        FDR = colDef(aggregate = "unique")
+      )
+    ) 
+)
+```
+
+
+```{r defineUpTFNetwork}
+sigTF <- genesByTF %>%
+  .[dplyr::filter(upTfGoseqRes, FDR < alpha)$Category] %>%
+  lapply(intersect, up) %>%
+  lapply(function(x){dge$genes[x,]$gene_name}) %>%
+  setNames(
+    names(.) %>%
+      str_replace_all("(HALLMARK|GO|KEGG|WP)_(.+)", "\\2 (\\1)") %>%
+      str_replace_all("_", " ") %>%
+      str_wrap(16)
+  )
+tfGraph <- makeTidyGraph(sigTF, topTable)
+```
+
+```{r plotUpTFNetwork, echo = FALSE, fig.height=10, fig.cap = glue("*Transcriptional regulatory gene-sets enriched within the {length(up)} up-regulated genes to an FDR of {alpha}. For genes, node and label size are proportional to the extent of the estimated fold-change.*")}
+set.seed(22)
+plotTidyGraph(tfGraph, palette = "Dark 2", paletteSource = "gr") 
+```
+
+The distinct patterns of regulation by GREB1 and LEF1 were noticeable in both the above network plot and the correlations.
+
+
+```{r tfUpCorrplot, fig.height=7, fig.width=7, fig.cap = glue("*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR < {alpha}) in up-regulated genes.*")}
+upTfGoseqRes %>%
+  dplyr::filter(FDR < alpha) %>%
+  dplyr::select(gs_name = Category) %>%
+  left_join(msigDB) %>%
+  dplyr::filter(gene_id %in% up) %>%
+  dplyr::mutate(is_in = TRUE) %>%
+  pivot_wider(
+    id_cols = c("gs_name", "gene_symbol", "gene_id"),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %>%
+  dplyr::select(any_of(msigDB$gs_name)) %>%
+  cor() %>%
+  corrplot(
+    type = "upper",
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = "hclust",
+    addshade = "all",
+    col = colorRampPalette(c("blue", "white", "red"))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )
+```
+
+## Down-Regulated Genes
+
+
+```{r downTfGoSeqRes}
+downTfGoseqRes <- goseq(downPwf, gene2cat = tfByGene) %>%
+  as_tibble() %>%
+  dplyr::mutate(
+    Expected = round(length(down)* numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, "BH")
+  ) %>%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha <- 0.05
+```
+
+Given the reduced power of the smaller gene-sets used when investigating up & down-regulated genes separately, an FDR of `r alpha` was again chosen for this section.
+Using this FDR threshold of $\alpha =$ `r alpha`, `r nrow(dplyr::filter(tfGoseqRes, FDR < alpha))` transcriptional regulation gene sets were considered as enriched within the set of `r length(down)` previously defined down-regulated genes.
+
+```{r tabDownTfGoSeq, echo = FALSE}
+cp <- glue(
+  "Regulatory gene-sets to an FDR of {alpha} within the set of {length(up)} up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment."
+) %>%
+  em()
+htmltools::div(
+  class = "enriched-tf",
+  htmltools::div(class = "title", cp),
+  downTfGoseqRes %>%
+    dplyr::filter(FDR < alpha) %>%
+    left_join(
+      msigDB, by = c("Category" = "gs_name")
+    ) %>%
+    dplyr::filter(gene_id %in% down) %>%
+    dplyr::select(
+      any_of(colnames(downTfGoseqRes)), gene_symbol
+    ) %>%
+    chop(gene_symbol) %>%
+    mutate(
+      gene_symbol = vapply(gene_symbol, paste, character(1), collapse = "; ")
+    ) %>%
+    dplyr::mutate_at(
+      c("Enrichment p", "FDR"), as_sci
+    ) %>%
+    dplyr::rename(
+      `Number Down` = `Number DE`,
+      "Genes" = gene_symbol
+    ) %>%
+    reactable(
+      groupBy = "Category", 
+      filterable = TRUE,
+      pageSizeOptions = c(10, 25, 50, 100),
+      showPageSizeOptions = TRUE,
+      defaultPageSize = 25,
+      columns = list(
+        `Number Down` = colDef(aggregate = "unique"),
+        Expected = colDef(aggregate = "unique"),
+        `Gene Set Size` = colDef(aggregate = "unique"),
+        `Enrichment p` = colDef(aggregate = "unique"),
+        FDR = colDef(aggregate = "unique")
+      )
+    ) 
+)
+```
+
+
+```{r defineDownTFNetwork}
+alpha <- 0.05
+minSize <- 5
+sigTF <- genesByTF %>%
+  .[dplyr::filter(downTfGoseqRes, FDR < alpha)$Category] %>%
+  lapply(intersect, down) %>%
+  lapply(function(x){dge$genes[x,]$gene_name}) %>%
+  setNames(
+    names(.) %>%
+      str_replace_all("(HALLMARK|GO|KEGG|WP)_(.+)", "\\2 (\\1)") %>%
+      str_replace_all("_", " ") %>%
+      str_wrap(16)
+  ) %>%
+  .[vapply(., length, integer(1)) >= minSize]
+tfGraph <- makeTidyGraph(sigTF, topTable)
+```
+
+```{r plotDownTFNetwork, echo = FALSE, fig.height=10, fig.cap = glue("*Transcriptional regulatory gene-sets enriched within the {length(down)} down-regulated genes to an FDR of {alpha}. For genes, node and label size are proportional to the extent of the estimated fold-change.*")}
+set.seed(22)
+plotTidyGraph(tfGraph, palette = "Dark 2", paletteSource = "gr") 
+```
+
+- CEBP_Q2 and NFATQ4 appear to capture distinct sets of genes
+- ICSBP_Q6 and IRF_Q6 appear to capture more common sets of genes
+
+
+```{r tfDownCorrplot, fig.height=7, fig.width=7, fig.cap = glue("*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR < {alpha}) in down-regulated genes.*")}
+downTfGoseqRes %>%
+  dplyr::filter(FDR < alpha) %>%
+  dplyr::select(gs_name = Category) %>%
+  left_join(msigDB) %>%
+  dplyr::filter(gene_id %in% down) %>%
+  dplyr::mutate(is_in = TRUE) %>%
+  pivot_wider(
+    id_cols = c("gs_name", "gene_symbol", "gene_id"),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %>%
+  dplyr::select(any_of(msigDB$gs_name)) %>%
+  cor() %>%
+  corrplot(
+    type = "upper",
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = "hclust",
+    addshade = "all",
+    col = colorRampPalette(c("blue", "white", "red"))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )
+```
+
+## Combined Up And Down-Regulated Results
+
+```{r resetAlpha}
+alpha <- 0.05
+```
+
+
+```{r plotDirectionalTFP, fig.height=10, fig.cap = glue("*Comparison of p-values for directional enrichment. Only gene-sets with an FDR-adjusted p-value < {alpha} are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. All gene-sets were considered significant in the non-directional analysis.*")}
+bind_rows(
+  upTfGoseqRes %>% mutate(Direction = "Up"),
+  downTfGoseqRes %>% mutate(Direction = "Down")
+) %>%
+  group_by(Category) %>%
+  dplyr::filter(min(FDR) < alpha & min(`Enrichment p`) < 0.001) %>%
+  arrange(mean(1/ `Enrichment p`, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(Category = fct_inorder(Category)) %>%
+  ggplot(aes(Category, -log10(`Enrichment p`), fill = Direction)) +
+  geom_col(position = "dodge") +
+  geom_hline(yintercept = 3, linetype = 2) +
+  coord_flip() +
+  labs(y = expression(paste(log[10], "p"))) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c("#0000FFB3", "#FF0000B3")
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1)
+  )
+```
+
+A comparison of the p-values obtained from the individual directional analysis revealed:
+
+- Both AP1 and NFAT regulated genes appear to have no directional bias
+- GREB1, LEF1 and CHX10 regulated genes appear slightly biased towards up-regulation
+- Most other gene-sets have a bias to either up (e.g. AACTTT_UNKNOWN, HMEF2) or down (e.g. ICSBP, IRF, TCF4) regulation
+
+

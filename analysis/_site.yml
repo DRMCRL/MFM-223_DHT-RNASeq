@@ -1,7 +1,7 @@
-name: "Insert Name Here"
+name: "MFM-223_DHT-RNASeq"
 output_dir: ../docs
 navbar:
-  title: "Insert Name Here"
+  title: "MFM-223_DHT-RNASeq"
   left:
   - text: Home
     href: index.html
@@ -21,6 +21,8 @@ navbar:
     menu:
       - text: Differential Gene Expression
         href: dge_analysis.html
+      - text: Enrichment Analysis
+        href: dge_enrichment.html
 output:
   workflowr::wflow_html:
     toc: yes
