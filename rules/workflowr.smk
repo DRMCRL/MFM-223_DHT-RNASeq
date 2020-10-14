@@ -1,5 +1,5 @@
 rule make_rproj:
-    output = os.getcwd() + ".Rproj"
+    output: os.getcwd() + ".Rproj"
     threads: 1
     shell:
         """
