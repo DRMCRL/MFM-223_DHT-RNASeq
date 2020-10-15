@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Stephen Pederson" />
+
+
+<title>Enrichment Analysis</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/core-js-2.5.3/shim.min.js"></script>
+<script src="site_libs/react-16.12.0/react.min.js"></script>
+<script src="site_libs/react-16.12.0/react-dom.min.js"></script>
+<script src="site_libs/reactwidget-1.0.0/react-tools.js"></script>
+<script src="site_libs/htmlwidgets-1.5.2/htmlwidgets.js"></script>
+<script src="site_libs/reactable-binding-0.2.3/reactable.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+      </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MFM-223_DHT-RNASeq</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="description.html">Description</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    QC
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="qc_raw.html">Raw Data</a>
+    </li>
+    <li>
+      <a href="qc_trimmed.html">Trimmed Data</a>
+    </li>
+    <li>
+      <a href="qc_aligned.html">Aligned Data</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Analysis
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="dge_analysis.html">Differential Gene Expression</a>
+    </li>
+    <li>
+      <a href="dge_enrichment.html">Enrichment Analysis</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+<div class="btn-group pull-right">
+<button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Enrichment Analysis</h1>
+<h4 class="author">Stephen Pederson</h4>
+<h4 class="date">15 October, 2020</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2020-10-15
+</p>
+<p>
+<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>MFM-223_DHT-RNASeq/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+</p>
+<p>
+This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
+  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date </a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git repository, you know the exact version of the code that produced these results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20200930code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20200930)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20200930code" class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20200930)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomDRMCRLMFM223DHTRNASeqtreef2de6cc3ab46490c287e87e515b94216208f530btargetblankf2de6cca"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> <a href="https://github.com/DRMCRL/MFM-223_DHT-RNASeq/tree/f2de6cc3ab46490c287e87e515b94216208f530b" target="_blank">f2de6cc</a> </a>
+</p>
+</div>
+<div id="strongRepositoryversionstrongahrefhttpsgithubcomDRMCRLMFM223DHTRNASeqtreef2de6cc3ab46490c287e87e515b94216208f530btargetblankf2de6cca" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version <a href="https://github.com/DRMCRL/MFM-223_DHT-RNASeq/tree/f2de6cc3ab46490c287e87e515b94216208f530b" target="_blank">f2de6cc</a>. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+
+Untracked files:
+    Untracked:  analysis/makeTidyGraph.R
+    Untracked:  analysis/plotTidyGraph.R
+    Untracked:  output/MFM-223_RNASeq.tsv
+    Untracked:  output/dge.rds
+    Untracked:  output/genesGR.rds
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were made to the R Markdown (<code>analysis/dge_enrichment.Rmd</code>) and HTML (<code>docs/dge_enrichment.html</code>) files. If you’ve configured a remote Git repository (see <code>?wflow_git_remote</code>), click on the hyperlinks in the table below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/DRMCRL/MFM-223_DHT-RNASeq/blob/2f025f775af92b71e1aab330462889b5e74a7e5e/analysis/dge_enrichment.Rmd" target="_blank">2f025f7</a>
+</td>
+<td>
+Steve Pederson
+</td>
+<td>
+2020-10-14
+</td>
+<td>
+Reset for run with correct sjdbOverhang
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<pre class="r"><code>library(tidyverse)
+library(yaml)
+library(scales)
+library(pander)
+library(glue)
+library(edgeR)
+library(cowplot)
+library(magrittr)
+library(ggrepel)
+library(DT)
+library(msigdbr)
+library(goseq)
+library(reactable)
+library(htmltools)
+library(tidygraph)
+library(ggraph)
+library(corrplot)</code></pre>
+<pre class="r"><code>panderOptions(&quot;table.split.table&quot;, Inf)
+panderOptions(&quot;big.mark&quot;, &quot;,&quot;)
+panderOptions(&quot;missing&quot;, &quot;&quot;)
+theme_set(theme_bw())</code></pre>
+<pre class="r"><code>as_sci &lt;- function(p, d = 2, min = 0.01){
+  fmt &lt;- glue(&quot;%.{d}e&quot;)
+  new &lt;- character(length(p))
+  new[p &gt; min] &lt;- sprintf(glue(&quot;%.{d + 1}f&quot;), p[p &gt; min])
+  new[p &lt;= min] &lt;- sprintf(fmt, p[p &lt;= min])
+  new
+}
+source(here::here(&quot;analysis/makeTidyGraph.R&quot;))
+source(here::here(&quot;analysis/plotTidyGraph.R&quot;))</code></pre>
+<pre class="r"><code>config &lt;- here::here(&quot;config/config.yml&quot;) %&gt;%
+  read_yaml()
+suffix &lt;- paste0(config$tag)
+sp &lt;- config$ref$species %&gt;%
+  str_replace(&quot;(^[a-z])[a-z]*_([a-z]+)&quot;, &quot;\\1\\2&quot;) %&gt;%
+  str_to_title()</code></pre>
+<pre class="r"><code>topTable &lt;- here::here(&quot;output/MFM-223_RNASeq.tsv&quot;) %&gt;%
+  read_tsv()
+de &lt;- dplyr::filter(topTable, DE)$gene_id
+up &lt;- dplyr::filter(topTable, DE, logFC &gt; 0)$gene_id
+down &lt;- dplyr::filter(topTable, DE, logFC &lt; 0)$gene_id
+dge &lt;- here::here(&quot;output/dge.rds&quot;) %&gt;%
+  read_rds()</code></pre>
+<div id="setup" class="section level1">
+<h1>Setup</h1>
+<div id="annotations" class="section level2">
+<h2>Annotations</h2>
+<pre class="r"><code>minPath &lt;- 5
+goSummaries &lt;- url(&quot;https://uofabioinformaticshub.github.io/summaries2GO/data/goSummaries.RDS&quot;) %&gt;%
+  readRDS() %&gt;% 
+  mutate(exclude = shortest_path &lt; minPath &amp; !terminal_node)</code></pre>
+<pre class="r"><code>msigDB &lt;- msigdbr(species = &quot;Homo sapiens&quot;) %&gt;%
+  dplyr::filter(
+    gs_cat %in% c(&quot;H&quot;, &quot;C5&quot;) | 
+      gs_subcat %in% c(&quot;CP:KEGG&quot;, &quot;CP:WIKIPATHWAYS&quot;, &quot;TFT:GTRD&quot;, &quot;TFT:TFT_Legacy&quot;),
+    gs_subcat != &quot;HPO&quot;
+  ) %&gt;%
+  inner_join(
+    dge$genes %&gt;%
+      unchop(entrezid) %&gt;%
+      dplyr::select(
+        entrez_gene = entrezid,
+        gene_id
+      )
+  ) %&gt;%
+  mutate(
+    exclude = gs_exact_source %in% dplyr::filter(goSummaries, exclude)$id
+  )
+nSets &lt;- dplyr::filter(msigDB, !exclude)$gs_id %&gt;% 
+  unique() %&gt;% 
+  length()</code></pre>
+<pre class="r"><code>pathByGene &lt;- msigDB %&gt;%
+  dplyr::filter(gs_cat != &quot;C3&quot;, !exclude) %&gt;%
+  split(.$gene_id) %&gt;%
+  lapply(pull, &quot;gs_name&quot;)
+tfByGene &lt;- msigDB %&gt;%
+  dplyr::filter(gs_cat == &quot;C3&quot;, !exclude) %&gt;%
+  split(.$gene_id) %&gt;%
+  lapply(pull, &quot;gs_name&quot;)</code></pre>
+<pre class="r"><code>genesByPath &lt;- msigDB %&gt;%
+  dplyr::filter(gs_cat != &quot;C3&quot;, !exclude) %&gt;%
+  split(.$gs_name) %&gt;%
+  lapply(pull, &quot;gene_id&quot;)
+genesByTF &lt;- msigDB %&gt;%
+  dplyr::filter(gs_cat == &quot;C3&quot;, !exclude) %&gt;%
+  split(.$gs_name) %&gt;%
+  lapply(pull, &quot;gene_id&quot;)</code></pre>
+<p>Gene-set collections were imported from MSigDB version 7.2.1. For gene-sets derived from GO terms, those with fewer than 5 steps back to each ontology root node were excluded as these were likely to be less informative than those at lower levels of the ontology. However, all terms considered as terminal nodes (i.e. with no children) were additionally retained. Information regarding the shortest path back to each ontology root was obtained from <a href="https://uofabioinformaticshub.github.io/summaries2GO/MakeSummaries" class="uri">https://uofabioinformaticshub.github.io/summaries2GO/MakeSummaries</a>.</p>
+<p>The gene-sets belonging to Category C3 were associated with transcriptional regulation, whilst the remaining gene-sets were more focussed on processes and pathways. Two analyses are performed below, following this distinction.</p>
+<pre class="r"><code>msigDB %&gt;%
+  distinct(gs_id, .keep_all = TRUE)  %&gt;% 
+  mutate(
+    gs_cat = as.factor(gs_cat) %&gt;% relevel(&quot;H&quot;),
+    gs_subcat = case_when(
+      gs_cat == &quot;H&quot; ~ &quot;HALLMARK&quot;,
+      TRUE ~ str_replace(gs_subcat, &quot;:&quot;, &quot;\\\\:&quot;)
+    )
+  ) %&gt;%
+  group_by(gs_cat, gs_subcat, exclude) %&gt;% 
+  tally() %&gt;%
+  ungroup() %&gt;%
+  pivot_wider(
+    names_from = exclude,
+    values_from = n
+  ) %&gt;%
+  bind_rows(
+    tibble(
+      gs_cat = &quot;Total&quot;,
+      gs_subcat = NA,
+      `FALSE` = sum(.$`FALSE`),
+      `TRUE` = sum(.$`TRUE`, na.rm = TRUE)
+    )
+  ) %&gt;%
+  dplyr::rename(
+    Category = gs_cat,
+    Collection = gs_subcat,
+    `Retained Gene-Sets` = `FALSE`,
+    `Discarded Gene Sets`= `TRUE`
+  ) %&gt;%
+  pander(
+    justify = &quot;llrr&quot;,
+    emphasize.strong.rows = nrow(.),
+    caption = glue(
+      &quot;*Summary of gene-sets and collections used in this analysis.
+      For a GO term to be retained, it was required to be a terminal node, 
+      or have a shortest path back to the root node of {minPath} or more steps.*&quot;
+    )
+  )</code></pre>
+<table>
+<caption><em>Summary of gene-sets and collections used in this analysis. For a GO term to be retained, it was required to be a terminal node, or have a shortest path back to the root node of 5 or more steps.</em></caption>
+<colgroup>
+<col width="16%" />
+<col width="25%" />
+<col width="28%" />
+<col width="29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Category</th>
+<th align="left">Collection</th>
+<th align="right">Retained Gene-Sets</th>
+<th align="right">Discarded Gene Sets</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">H</td>
+<td align="left">HALLMARK</td>
+<td align="right">50</td>
+<td align="right"></td>
+</tr>
+<tr class="even">
+<td align="left">C2</td>
+<td align="left">CP:KEGG</td>
+<td align="right">186</td>
+<td align="right"></td>
+</tr>
+<tr class="odd">
+<td align="left">C2</td>
+<td align="left">CP:WIKIPATHWAYS</td>
+<td align="right">583</td>
+<td align="right"></td>
+</tr>
+<tr class="even">
+<td align="left">C3</td>
+<td align="left">TFT:GTRD</td>
+<td align="right">347</td>
+<td align="right"></td>
+</tr>
+<tr class="odd">
+<td align="left">C3</td>
+<td align="left">TFT:TFT_Legacy</td>
+<td align="right">610</td>
+<td align="right"></td>
+</tr>
+<tr class="even">
+<td align="left">C5</td>
+<td align="left">GO:BP</td>
+<td align="right">4,160</td>
+<td align="right">3,362</td>
+</tr>
+<tr class="odd">
+<td align="left">C5</td>
+<td align="left">GO:CC</td>
+<td align="right">487</td>
+<td align="right">508</td>
+</tr>
+<tr class="even">
+<td align="left">C5</td>
+<td align="left">GO:MF</td>
+<td align="right">1,127</td>
+<td align="right">530</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>Total</strong></td>
+<td align="left"></td>
+<td align="right"><strong>7,550</strong></td>
+<td align="right"><strong>4,400</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="assessment-of-sampling-bias-for-de-genes" class="section level2">
+<h2>Assessment of Sampling Bias for DE Genes</h2>
+<pre class="r"><code>pwf &lt;- list(
+  length = topTable %&gt;%
+    arrange(gene_id) %&gt;%
+    with(
+      nullp(
+        DEgenes = structure(DE, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+  ),
+  gc = topTable %&gt;%
+    arrange(gene_id) %&gt;%
+    with(
+      nullp(
+        DEgenes = structure(DE, names = gene_id),
+        bias.data = gc_content,
+        plot.fit = FALSE
+      )
+    )
+)</code></pre>
+<pre class="r"><code>par(mfrow = c(1, 2))
+plotPWF(pwf$length, xlab = &quot;Gene Length&quot;, ylim = c(0, 0.13), log = &quot;x&quot;)
+plotPWF(pwf$gc, xlab = &quot;GC content&quot;, ylim = c(0, 0.13))</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotPWF-1.png" alt="*Comparison of gene length and GC content on the probability of a gene being considered as DE*" width="768" />
+<p class="caption">
+<em>Comparison of gene length and GC content on the probability of a gene being considered as DE</em>
+</p>
+</div>
+<pre class="r"><code>par(mfrow = c(1, 1))</code></pre>
+<p>As some bias has been previously identified in this dataset, a probability weight function for consideration of a gene as DE was estimated using the standard <code>goseq</code> workflow. Both GC content and gene length were investigated as potential sources of bias with gene length demonstrating the largest influence. This was subsequently included as an offset for sampling bias in all enrichment analyses looking <strong>within</strong> the set of DE genes.</p>
+<p>For enrichment analysis of up and down-regulated genes separately, probability weight functions were also generated for both subsets of DE genes</p>
+<pre class="r"><code>upPwf &lt;- topTable %&gt;%
+    arrange(gene_id) %&gt;%
+    with(
+      nullp(
+        DEgenes = structure(DE &amp; logFC &gt; 0, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+    )
+downPwf &lt;- topTable %&gt;%
+    arrange(gene_id) %&gt;%
+    with(
+      nullp(
+        DEgenes = structure(DE &amp; logFC &lt; 0, names = gene_id),
+        bias.data = ave_tx_len,
+        plot.fit = FALSE
+      )
+    )
+par(mfrow = c(1, 2))
+plotPWF(upPwf, main = &quot;Up-regulated genes&quot;, log = &quot;x&quot;, ylim = c(0, 0.1))
+plotPWF(downPwf, main = &quot;Down-regulated genes&quot;, log = &quot;x&quot;, ylim = c(0, 0.1))</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/directionalPWF-1.png" alt="*The influence of gene length on the probability of being considered DE, for both up and down-regulated genes*" width="960" />
+<p class="caption">
+<em>The influence of gene length on the probability of being considered DE, for both up and down-regulated genes</em>
+</p>
+</div>
+<pre class="r"><code>par(mfrow = c(1, 1))</code></pre>
+</div>
+</div>
+<div id="pathway-and-process-focussed-analysis" class="section level1">
+<h1>Pathway and Process Focussed Analysis</h1>
+<div id="all-de-genes" class="section level2">
+<h2>All DE Genes</h2>
+<pre class="r"><code>pathGoseqRes &lt;- goseq(pwf$length, gene2cat = pathByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(sum(topTable$DE) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.01</code></pre>
+<p>Using an FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.01, 9 pathway &amp; process-related gene sets were considered as enriched within the set of 856 previously-defined DE genes.</p>
+<div class="enriched-tf">
+<div class="title">
+<em>All enriched pathway &amp; process gene-sets to an FDR of 0.01. DE Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment.</em>
+</div>
+<div id="htmlwidget-895b7d97228efddd6387" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-895b7d97228efddd6387">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"Category":["HALLMARK_ESTROGEN_RESPONSE_EARLY","HALLMARK_ANDROGEN_RESPONSE","HALLMARK_ESTROGEN_RESPONSE_LATE","HALLMARK_TNFA_SIGNALING_VIA_NFKB","KEGG_PROXIMAL_TUBULE_BICARBONATE_RECLAMATION","KEGG_NITROGEN_METABOLISM","HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION","GO_REGULATION_OF_MAPK_CASCADE","GO_SODIUM_ION_HOMEOSTASIS"],"Number DE":[43,22,28,27,7,7,21,50,8],"Expected":[9,5,9,8,1,1,6,24,1],"Gene Set Size":[167,89,159,141,12,13,113,432,19],"Enrichment p":["1.13e-16","9.10e-09","5.04e-08","7.16e-08","7.15e-07","2.50e-06","2.82e-06","6.58e-06","7.53e-06"],"FDR":["7.42e-13","3.00e-05","1.11e-04","1.18e-04","9.43e-04","2.66e-03","2.66e-03","5.43e-03","5.52e-03"],"Genes":["ADD3; AKAP1; AR; AREG; BCL2; CA12; CHPT1; DEPTOR; DHRS2; DHRS3; ELOVL5; ENDOD1; FASN; FCMR; FKBP5; FRK; HES1; IGFBP4; KDM4B; KRT15; KRT19; LRIG1; MYB; MYBBP1A; MYC; NAV2; NBL1; PDLIM3; PPIF; PRSS23; RRP12; SCNN1A; SEC14L2; SLC1A1; SLC22A5; SLC26A2; SLC7A5; STC2; TFF1; TIAM1; TMEM164; TSKU; WWC1","ABCC4; ARID5B; AZGP1; DHCR24; ELL2; ELOVL5; FKBP5; HMGCR; HPGD; INSIG1; IQGAP2; ITGAV; KRT19; LIFR; NDRG1; NKX3-1; PMEPA1; RRP12; SLC26A2; SPDEF; TPD52; UAP1","ADD3; AREG; BCL2; CA12; CA2; CHPT1; DHRS2; DUSP2; ELOVL5; FKBP5; FRK; IGFBP4; KRT19; MYB; NBL1; PCP4; PDLIM3; PPIF; PRSS23; PTGER3; SCNN1A; SERPINA1; SLC22A5; SLC26A2; SLC7A5; TFF1; TIAM1; UGDH","AREG; BCL6; BIRC3; BTG2; DUSP2; DUSP4; EFNA1; GADD45A; GADD45B; HES1; IER3; JUN; KLF9; KYNU; MYC; NAMPT; NFKBIA; NR4A1; OLR1; PDE4B; PER1; PFKFB3; PHLDA1; PMEPA1; SDC4; SIK1; SLC16A6","ATP1A1; ATP1A4; ATP1B1; CA2; GLS; GLUD1; GLUD2","CA12; CA2; GLS; GLUD1; GLUD2; GLUL; HAL","AREG; BASP1; CCN2; COL12A1; COL16A1; DAB2; FBN1; FBN2; FZD8; GADD45A; GADD45B; IGFBP3; IGFBP4; ITGAV; JUN; LAMC1; PMEPA1; SDC4; THBS1; VCAN; VEGFC","AGER; AKAP13; AR; ARRB1; BMP4; CCN2; CEACAM1; DRD2; DUSP2; DUSP4; DUSP6; EFNA1; FBXW7; FZD8; GADD45A; GADD45B; GADD45G; GBP1; GCNT2; GPS2; HIPK2; HMGCR; ID1; IGFBP3; IGFBP4; JUN; LPAR1; MAP2K6; MECOM; MYC; P2RY6; PAK3; PEA15; PER1; PTPRJ; PTPRR; RASSF2; RELL1; RGS2; SASH1; SPRED1; THBS1; THPO; TIAM1; TNFRSF19; TRIB2; VANGL2; WNT7B; WWC1; XDH","ATP1A1; ATP1A4; ATP1B1; CYP4F12; DRD2; NEDD4L; SCNN1A; SLC12A2"]},"columns":[{"accessor":"Category","name":"Category","type":"character"},{"accessor":"Number DE","name":"Number DE","type":"numeric","aggregate":"unique"},{"accessor":"Expected","name":"Expected","type":"numeric","aggregate":"unique"},{"accessor":"Gene Set Size","name":"Gene Set Size","type":"numeric","aggregate":"unique"},{"accessor":"Enrichment p","name":"Enrichment p","type":"character","aggregate":"unique"},{"accessor":"FDR","name":"FDR","type":"character","aggregate":"unique"},{"accessor":"Genes","name":"Genes","type":"character"}],"pivotBy":["Category"],"filterable":true,"defaultPageSize":25,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"d30252f3cd3660d00554723512da0fd9","key":"d30252f3cd3660d00554723512da0fd9"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+<pre class="r"><code>alpha &lt;- 0.01
+sigPath &lt;- genesByPath %&gt;%
+  .[dplyr::filter(pathGoseqRes, FDR &lt; alpha)$Category] %&gt;%
+  lapply(intersect, de) %&gt;%
+  lapply(function(x){dge$genes[x,]$gene_name}) %&gt;%
+  setNames(
+    names(.) %&gt;%
+      str_replace_all(&quot;(HALLMARK|GO|KEGG|WP)_(.+)&quot;, &quot;\\2 (\\1)&quot;) %&gt;%
+      str_replace_all(&quot;_&quot;, &quot; &quot;) %&gt;%
+      str_wrap(16)
+  )
+pathGraph &lt;- makeTidyGraph(sigPath, topTable)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotPathNetwork-1.png" alt="*Pathway &amp; process-related gene-sets enriched within the DE genes to an FDR of 0.01. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.*" width="960" />
+<p class="caption">
+<em>Pathway &amp; process-related gene-sets enriched within the DE genes to an FDR of 0.01. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.</em>
+</p>
+</div>
+<p>The above visualisation clearly showed:</p>
+<ul>
+<li>The Androgen Response was primarily up-regulated</li>
+<li>The Early and Late Estrogen Responses were both observed, and largely overlapped</li>
+<li>Regulation of the MAPK Cascade, <em>TNF<span class="math inline">\(\alpha\)</span></em> signalling via <em>NF<span class="math inline">\(\kappa\beta\)</span></em> and the EMT transition were highly connected</li>
+<li>Three connected metabolic processes were also well connected</li>
+</ul>
+<pre class="r"><code>msigDB %&gt;%
+  dplyr::filter(
+    gs_name %in% dplyr::filter(pathGoseqRes, FDR &lt; alpha)$Category
+  ) %&gt;%
+  mutate(
+    direction = case_when(
+      gene_id %in% up ~ &quot;Up&quot;,
+      gene_id %in% down ~ &quot;Down&quot;,
+      TRUE ~ &quot;Unchanged&quot;
+    ) %&gt;%
+      factor(levels = c(&quot;Unchanged&quot;, &quot;Down&quot;, &quot;Up&quot;))
+  ) %&gt;%
+  group_by(gs_name, direction) %&gt;%
+  tally() %&gt;%
+  ungroup() %&gt;%
+  arrange(desc(n)) %&gt;%
+  mutate(gs_name = fct_inorder(gs_name)) %&gt;%
+  ggplot(
+    aes(gs_name, n, fill = direction)
+  ) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    x = &quot;Gene Set&quot;,
+    y = &quot;Number of Genes&quot;,
+    fill = &quot;Direction&quot;
+  ) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c(&quot;grey80&quot;, &quot;blue&quot;, &quot;red&quot;)
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1),
+    panel.grid.major.y = element_blank()
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotPathGS-1.png" alt="*Distribution of up &amp; down-regulated genes within each enriched pathway &amp; process-related gene-set.*" width="960" />
+<p class="caption">
+<em>Distribution of up &amp; down-regulated genes within each enriched pathway &amp; process-related gene-set.</em>
+</p>
+</div>
+</div>
+<div id="up-regulated-genes" class="section level2">
+<h2>Up-Regulated Genes</h2>
+<pre class="r"><code>upPathGoseqRes &lt;- goseq(upPwf, gene2cat = pathByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(length(up) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.05</code></pre>
+<p>Given the reduced power of the smaller gene-sets used when investigating up &amp; down-regulated genes separately, an FDR of 0.05 was chosen for this section. Using this FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.05, 33 pathway &amp; process-related gene sets were considered as enriched within the set of 384 <strong>up-regulated</strong> genes.</p>
+<div class="enriched-tf">
+<div class="title">
+<em>All enriched pathway &amp; process gene-sets to an FDR of 0.05 in the subset of up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment.</em>
+</div>
+<div id="htmlwidget-f9a20bb858604fdeefb0" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-f9a20bb858604fdeefb0">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"Category":["HALLMARK_ESTROGEN_RESPONSE_EARLY","HALLMARK_ANDROGEN_RESPONSE","HALLMARK_TNFA_SIGNALING_VIA_NFKB","KEGG_PROXIMAL_TUBULE_BICARBONATE_RECLAMATION","WP_AMINO_ACID_METABOLISM","HALLMARK_ESTROGEN_RESPONSE_LATE","HALLMARK_MYC_TARGETS_V2","GO_GLUTAMATE_METABOLIC_PROCESS","GO_GLUTAMINE_FAMILY_AMINO_ACID_CATABOLIC_PROCESS","WP_NUCLEAR_RECEPTORS_METAPATHWAY","GO_GLUTAMATE_CATABOLIC_PROCESS","KEGG_ARGININE_AND_PROLINE_METABOLISM","GO_SODIUM_ION_HOMEOSTASIS","KEGG_NITROGEN_METABOLISM","GO_MENAQUINONE_METABOLIC_PROCESS","GO_AROMATASE_ACTIVITY","GO_E_BOX_BINDING","GO_ORGANIC_ACID_TRANSPORT","KEGG_ALANINE_ASPARTATE_AND_GLUTAMATE_METABOLISM","GO_DICARBOXYLIC_ACID_BIOSYNTHETIC_PROCESS","GO_INTESTINAL_EPITHELIAL_CELL_DIFFERENTIATION","GO_GLUTAMATE_BIOSYNTHETIC_PROCESS","GO_MONOCARBOXYLIC_ACID_METABOLIC_PROCESS","GO_DICARBOXYLIC_ACID_CATABOLIC_PROCESS","GO_GLUTAMINE_FAMILY_AMINO_ACID_METABOLIC_PROCESS","GO_SODIUM_CHANNEL_INHIBITOR_ACTIVITY","GO_FRUCTOSE_2_6_BISPHOSPHATE_2_PHOSPHATASE_ACTIVITY","GO_FRUCTOSE_2_6_BISPHOSPHATE_METABOLIC_PROCESS","HALLMARK_IL2_STAT5_SIGNALING","GO_ICOSANOID_CATABOLIC_PROCESS","GO_REGULATION_OF_SODIUM_ION_TRANSPORT","GO_LUNG_EPITHELIUM_DEVELOPMENT","GO_SODIUM_ION_TRANSPORT"],"Number Up-Regulated":[31,20,18,6,11,17,10,7,6,18,4,8,6,5,3,4,7,17,6,4,5,3,27,4,8,3,3,3,13,3,8,6,12],"Expected":[4,2,3,0,2,4,1,1,0,4,0,1,0,0,0,0,1,5,1,0,0,0,10,0,1,0,0,0,3,0,1,1,3],"Gene Set Size":[167,89,141,12,70,159,58,23,17,181,6,41,19,13,3,7,31,186,25,9,15,4,426,10,52,4,4,4,132,5,54,29,115],"Enrichment p":["2.05e-16","1.19e-12","2.39e-07","3.34e-07","2.42e-06","2.52e-06","2.71e-06","2.75e-06","4.81e-06","6.88e-06","9.16e-06","1.17e-05","1.56e-05","2.24e-05","2.51e-05","2.52e-05","2.85e-05","4.03e-05","6.41e-05","6.94e-05","7.19e-05","8.10e-05","9.05e-05","1.10e-04","1.11e-04","1.11e-04","1.15e-04","1.15e-04","1.50e-04","1.60e-04","1.91e-04","2.16e-04","2.35e-04"],"FDR":["1.35e-12","3.94e-09","5.25e-04","5.50e-04","2.26e-03","2.26e-03","2.26e-03","2.26e-03","3.52e-03","4.54e-03","5.49e-03","6.45e-03","7.94e-03","0.010","0.010","0.010","0.011","0.015","0.022","0.023","0.023","0.024","0.026","0.027","0.027","0.027","0.027","0.027","0.034","0.035","0.041","0.045","0.047"],"Genes":["ADD3; AKAP1; CHPT1; DEPTOR; ELOVL5; ENDOD1; FASN; FKBP5; FRK; HES1; IGFBP4; KDM4B; KRT15; KRT19; LRIG1; MYBBP1A; MYC; NBL1; PPIF; PRSS23; RRP12; SCNN1A; SEC14L2; SLC1A1; SLC22A5; SLC26A2; SLC7A5; STC2; TMEM164; TSKU; WWC1","ABCC4; AZGP1; DHCR24; ELL2; ELOVL5; FKBP5; HMGCR; HPGD; IQGAP2; ITGAV; KRT19; LIFR; NDRG1; NKX3-1; PMEPA1; RRP12; SLC26A2; SPDEF; TPD52; UAP1","BCL6; BIRC3; DUSP2; GADD45A; GADD45B; HES1; JUN; KLF9; MYC; NAMPT; NFKBIA; NR4A1; OLR1; PER1; PFKFB3; PMEPA1; SIK1; SLC16A6","ATP1A1; ATP1A4; CA2; GLS; GLUD1; GLUD2","ACAA1; GCLM; GLS; GLUD1; GLUL; GOT1; GPT2; MARS2; ODC1; PNMT; SRM","ADD3; CA2; CHPT1; DUSP2; ELOVL5; FKBP5; FRK; IGFBP4; KRT19; NBL1; PPIF; PRSS23; SCNN1A; SLC22A5; SLC26A2; SLC7A5; UGDH","DUSP2; MYBBP1A; MYC; NIP7; NOLC1; NOP16; PPAN; RRP12; SRM; WDR43","GCLC; GCLM; GLS; GLUD1; GLUD2; GLUL; GOT1","ASRGL1; GLS; GLUD1; GLUD2; GLUL; GOT1","ABCC4; ACAA1; AKAP13; BIRC3; CYP1B1; CYP4F12; FASN; FKBP5; GADD45B; GCLC; GCLM; HES1; JUN; MYC; RGS2; SCNN1A; SLC26A2; SLC7A5","GLUD1; GLUD2; GLUL; GOT1","AMD1; GLS; GLUD1; GLUD2; GLUL; GOT1; ODC1; SRM","ATP1A1; ATP1A4; CYP4F12; DRD2; NEDD4L; SCNN1A","CA2; GLS; GLUD1; GLUD2; GLUL","CYP4F12; CYP4F3; UBIAD1","CYP1B1; CYP4F12; CYP4F3; CYP4F8","ATOH8; HES1; HIF1A; MYBBP1A; MYC; PER1; TFAP4","ABCC1; ABCC4; ABCD3; ACACA; CROT; DRD2; GLS; MPC2; PRKAB2; RGS2; SLC16A6; SLC1A1; SLC26A2; SLC26A3; SLC36A1; SLC7A5; THBS1","GLS; GLUD1; GLUD2; GLUL; GOT1; GPT2","GLS; GLUD1; GLUD2; GOT1","GATA6; HIF1A; KLF5; SPDEF; YAP1","GLS; GLUD1; GLUD2","ABCD3; ABHD3; ACAA1; ACACA; AMACR; ASRGL1; CROT; CYP1B1; CYP4F12; CYP4F3; CYP4F8; DDIT4; ELOVL5; FASN; HIF1A; HPGD; MCCC2; MPC2; PDK1; PDP2; PFKFB2; PFKFB3; PFKFB4; PNKD; PRKAB2; UGT2B11; UGT2B28","GLUD1; GLUD2; GLUL; GOT1","ASRGL1; GCLC; GCLM; GLS; GLUD1; GLUD2; GLUL; GOT1","CAMK2D; NEDD4; NEDD4L","PFKFB2; PFKFB3; PFKFB4","PFKFB2; PFKFB3; PFKFB4","ALCAM; AMACR; CA2; EMP1; GADD45B; HIPK2; ITGAV; LRIG1; MYC; NDRG1; ODC1; PRKCH; RORA","CYP4F12; CYP4F3; HPGD","ATP1A1; CAMK2D; DRD2; NEDD4; NEDD4L; PER1; SIK1; WNK3","GATA6; GRHL2; RBPJ; SPDEF; WNT7B; YAP1","ATP1A1; ATP1A4; CAMK2D; DRD2; NEDD4; NEDD4L; PER1; SCNN1A; SIK1; SLC20A1; SLC22A5; WNK3"]},"columns":[{"accessor":"Category","name":"Category","type":"character"},{"accessor":"Number Up-Regulated","name":"Number Up-Regulated","type":"numeric","aggregate":"unique"},{"accessor":"Expected","name":"Expected","type":"numeric","aggregate":"unique"},{"accessor":"Gene Set Size","name":"Gene Set Size","type":"numeric","aggregate":"unique"},{"accessor":"Enrichment p","name":"Enrichment p","type":"character","aggregate":"unique"},{"accessor":"FDR","name":"FDR","type":"character","aggregate":"unique"},{"accessor":"Genes","name":"Genes","type":"character"}],"pivotBy":["Category"],"filterable":true,"defaultPageSize":25,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"18ec48b1f3657cf7657f0a12f87a42d6","key":"18ec48b1f3657cf7657f0a12f87a42d6"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+<pre class="r"><code>alpha &lt;- 0.05
+minSize &lt;- 5
+sigPath &lt;- genesByPath %&gt;%
+  .[dplyr::filter(upPathGoseqRes, FDR &lt; alpha)$Category] %&gt;%
+  lapply(intersect, up) %&gt;%
+  lapply(function(x){dge$genes[x,]$gene_name}) %&gt;%
+  setNames(
+    names(.) %&gt;%
+      str_replace_all(&quot;(HALLMARK|GO|KEGG|WP)_(.+)&quot;, &quot;\\2 (\\1)&quot;) %&gt;%
+      str_replace_all(&quot;_&quot;, &quot; &quot;) %&gt;%
+      str_wrap(16)
+  ) %&gt;%
+  .[vapply(., length, integer(1)) &gt;= minSize]
+pathGraph &lt;- makeTidyGraph(sigPath, topTable)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotUpPathNetwork-1.png" alt="*Pathway &amp; process-related gene-sets enriched within the set of **up-regulated** genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change. Gene-sets are only included if they contain at least 5 up-regulated genes*" width="960" />
+<p class="caption">
+<em>Pathway &amp; process-related gene-sets enriched within the set of <strong>up-regulated</strong> genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change. Gene-sets are only included if they contain at least 5 up-regulated genes</em>
+</p>
+</div>
+<p>Results for process &amp; pathway analysis in up-regulated genes once again showed</p>
+<ul>
+<li>The large set of interconnected metabolic processes</li>
+<li>A cluster of related pathways including ER and AR responses, along with <em>IL2</em> and <em>TNF<span class="math inline">\(\alpha\)</span></em> signalling</li>
+<li>The MYC Targets pathway was somewhat less connected</li>
+<li>Epithelial Development pathways were also less connected</li>
+</ul>
+</div>
+<div id="down-regulated-genes" class="section level2">
+<h2>Down-Regulated Genes</h2>
+<pre class="r"><code>downPathGoseqRes &lt;- goseq(downPwf, gene2cat = pathByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(length(down) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.05</code></pre>
+<p>Using an FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.05, 0 pathway &amp; process-related gene sets were considered as enriched within the set of 472 <strong>down-regulated</strong> genes.</p>
+</div>
+<div id="combined-up-and-down-regulated-results" class="section level2">
+<h2>Combined Up And Down-Regulated Results</h2>
+<pre class="r"><code>bind_rows(
+  upPathGoseqRes %&gt;% mutate(Direction = &quot;Up&quot;),
+  downPathGoseqRes %&gt;% mutate(Direction = &quot;Down&quot;)
+) %&gt;%
+  group_by(Category) %&gt;%
+  dplyr::filter(min(FDR) &lt; alpha) %&gt;%
+  arrange(mean(1/ `Enrichment p`, na.rm = TRUE)) %&gt;%
+  ungroup() %&gt;%
+  mutate(
+    Category = case_when(
+      Category %in% dplyr::filter(pathGoseqRes, FDR&lt;0.05)$Category ~ paste0(&quot;*&quot;, Category),
+      TRUE ~ Category
+    ),
+    Category = fct_inorder(Category)
+  ) %&gt;%
+  ggplot(aes(Category, -log10(`Enrichment p`), fill = Direction)) +
+  geom_col(position = &quot;dodge&quot;) +
+  geom_hline(yintercept = 3, linetype = 2) +
+  coord_flip() +
+  labs(y = expression(paste(log[10], &quot;p&quot;))) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c(&quot;#0000FFB3&quot;, &quot;#FF0000B3&quot;)
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1)
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotDirectionalPathP-1.png" alt="*Comparison of p-values for directional enrichment showing that all enrichment results had a clear directional bias. Only pathways with an FDR-adjusted p-value &lt; 0.05 are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. Gene-sets considered as significant in the combined (i.e. non-directional) analysis are marked with an asterisk*" width="960" />
+<p class="caption">
+<em>Comparison of p-values for directional enrichment showing that all enrichment results had a clear directional bias. Only pathways with an FDR-adjusted p-value &lt; 0.05 are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. Gene-sets considered as significant in the combined (i.e. non-directional) analysis are marked with an asterisk</em>
+</p>
+</div>
+<p>A comparison of the p-values obtained from the individual directional analysis revealed that all pathways showed a clear directional bias, with each pathway only enriched in one direction.</p>
+</div>
+</div>
+<div id="regulation-focussed-analysis" class="section level1">
+<h1>Regulation-Focussed Analysis</h1>
+<div id="all-de-genes-1" class="section level2">
+<h2>All DE Genes</h2>
+<pre class="r"><code>tfGoseqRes &lt;- goseq(pwf$length, gene2cat = tfByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(sum(topTable$DE) * numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.01</code></pre>
+<p>Using an FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.01, 18 transcriptional regulation gene sets were considered as enriched within the set of 856 previously defined DE genes.</p>
+<div class="enriched-tf">
+<div class="title">
+<em>Regulatory gene-sets to an FDR of 0.01. DE Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment.</em>
+</div>
+<div id="htmlwidget-f6d715ce67a4a530071a" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-f6d715ce67a4a530071a">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"Category":["AACTTT_UNKNOWN","TGGAAA_NFAT_Q4_01","GREB1_TARGET_GENES","TGANTCA_AP1_C","TAATTA_CHX10_01","GATA1_03","CTTTGA_LEF1_Q2","CEBP_C","GATA_C","CEBP_Q2_01","HNF3B_01","CTTTAAR_UNKNOWN","CREL_01","HNF1_01","TCF4_Q5","RP58_01","YTATTTTNR_MEF2_02","NKX61_01"],"Number DE":[124,119,69,75,56,25,78,23,24,27,22,65,25,20,21,19,46,21],"Expected":[69,68,36,40,27,8,42,7,8,10,7,35,9,7,8,7,23,8],"Gene Set Size":[1263,1250,662,727,487,142,775,132,146,181,126,649,173,127,141,119,427,140],"Enrichment p":["8.62e-08","9.42e-08","3.18e-07","3.93e-07","2.84e-06","2.99e-06","4.73e-06","4.93e-06","8.89e-06","1.43e-05","1.69e-05","2.84e-05","4.48e-05","7.42e-05","1.10e-04","1.35e-04","1.53e-04","1.60e-04"],"FDR":["4.51e-05","4.51e-05","9.40e-05","9.40e-05","4.77e-04","4.77e-04","5.89e-04","5.89e-04","9.45e-04","1.37e-03","1.47e-03","2.27e-03","3.30e-03","5.07e-03","6.99e-03","8.05e-03","8.51e-03","8.51e-03"],"Genes":["ADAMTS6; ADCY2; ADD3; AFF3; ALCAM; AMD1; AMIGO2; ARAP2; ARMT1; ATP8A2; ATXN1; BASP1; BCL6; CA12; CAMK2D; CASZ1; CDKL5; CLSTN2; CNTNAP2; COLEC12; COMMD3; CREB5; CYRIA; DACH1; DGKH; DHRS3; DIPK2A; DOCK4; EHF; ELOVL5; EPHA5; ESR1; FAT1; FBXW7; FOXA2; FST; GLS; GPRIN3; GRHL2; GRHL3; HES1; HIF1A; IMPDH1; IQGAP2; IRX3; JUN; KCNMA1; KCNS3; KLF8; KYNU; LRP8; LRRFIP2; LURAP1L; MAFB; MALL; MAP2K6; MARCHF3; MBNL2; MBOAT2; MECOM; MIR17HG; MMP16; MPC2; MPP6; MTSS1; MYC; NEBL; NELL2; NFATC4; NFKBIA; NXPH3; ONECUT2; PCDH9; PDE4B; PDLIM3; PHEX; PIK3R3; PLXDC2; PMEPA1; PPARGC1A; PPARGC1B; PPP1R3B; PREP; PRKAB2; PRR15; PTCHD1; RARB; RASSF2; RBPMS; RORA; SCUBE3; SDC4; SEMA3F; SERPINI1; SERTAD4; SESN3; SETD7; SLC12A2; SLC16A6; SLC1A3; SLC22A5; SLC26A3; SOX4; STARD13; STC2; SYTL2; TCF7L1; TEAD1; TFAP4; THBS1; TMTC2; TNFRSF19; TNFSF10; TNIP3; TP63; TSKU; TSPAN9; UAP1; VCAN; VSTM2L; ZBTB16; ZFHX3; ZFP36L2; ZNF431","ACACA; ADCY2; ADD3; AFF3; ALS2CL; AMD1; AREG; ARHGAP6; ATP1B1; ATXN1; BCL6; BMP4; C1orf116; C1orf21; CABLES1; CAMK2G; CCDC148; CCN2; CNR1; CNTNAP2; COL12A1; COL16A1; COLEC12; CREB5; DAB2; DHRS3; DOCK4; EAF2; EMP1; ESR1; FAM107B; FANK1; FBXW7; FHDC1; FST; FUT11; GADD45A; GADD45B; GARRE1; GATA3; GATA6; GCNT2; GLS; GRHL3; HIF1A; HMGCR; IER3; IGFBP3; IGFBP5; IGSF3; KCNMA1; KLF5; KLF8; KYNU; LURAP1L; MBNL2; MECOM; MIR17HG; MTMR11; MTSS1; NANOS1; NEDD4; NEDD4L; NFATC4; NFIX; NFKBIA; NPR3; NR4A1; PAK3; PDE4B; PDLIM3; PHEX; PHLDB1; PIK3R3; PNKD; PPAN; PPARGC1A; PPFIBP1; PRELP; PRKCH; PTCHD1; RANBP3L; RARB; RASSF2; RGS2; RNF19A; RNF43; RORA; SASH1; SCNN1A; SCUBE3; SDC4; SERINC5; SERPINI1; SERTAD4; SLC16A6; SNX25; SPRED1; SSTR5-AS1; STARD13; SYTL4; TBC1D8; TEAD1; TFAP4; TIAM1; TMEM164; TMTC2; TNFRSF19; TNFSF10; TNS1; TRIB2; UNC5C; VCAN; VEGFC; YAP1; ZFHX3; ZNF385A; ZNF431; ZNF563","AC009119.1; AKAP1; AKAP9; BRWD1; C1orf21; CA12; CHPT1; CORO2A; CYP1B1; CYTH2; DNAJB5; DOCK4; EHF; ENC1; EPN2; ERP27; FAM107B; FAM111B; FBXO38; FHDC1; FREM2; GALNT10; GCLM; GOT1; GRHL2; HRCT1; ID1; IGSF3; IGSF9; KDM4B; KIAA1217; LAMB1; LIMA1; LINC02747; LMCD1; LRIG3; MCCC2; MICOS10-NBL1; NDRG1; NFKBIA; NFKBIZ; NT5DC3; P2RY6; PNKD; PNPLA7; PPM1H; PREX1; PRKCH; PRR15L; PRSS23; RBBP8NL; RNF19A; RTN4; SCNN1A; SEC14L2; SERPINA1; SSTR5-AS1; STC2; TBC1D16; TBC1D8; TFF1; TMTC2; TNS1; TPRG1; TSPAN9; URB1; VAV3; WWC1; ZNF689","ACP3; ADAMTS6; AKAP1; ALS2CL; ARAP2; ATP1B1; C1orf21; CNTNAP2; COL16A1; CREB5; CYRIA; DHRS3; DMPK; DOCK4; EFNA1; EHF; EMP1; ESR1; FKBP5; FST; GADD45A; GADD45B; GADD45G; GPRIN3; HILPDA; IGSF3; IGSF8; IGSF9; IL1R1; KLF5; KLF9; KRT15; KRT19; LAMC1; LRRFIP2; LY6G6C; MAMDC2; MECOM; MIR17HG; MMRN2; MYB; NEBL; NFATC4; OLR1; ONECUT2; PCDH9; PEA15; PFKFB2; PFKFB3; PLA2G4F; PLCD4; POLR3E; PPARGC1A; PTPRR; RBPJ; RGS2; RTN4; SLC16A6; SPRED1; STARD13; STC2; TFF1; THBS1; THPO; TMEM156; TMEM40; TNIP3; TP63; TRIM9; TSKU; TSR1; TUBA4A; VASN; WNT7B; XDH","ADD3; AFF3; AMD1; ARHGAP6; ARRB1; BAMBI; BASP1; BCL6; BHLHE41; BMP4; CA2; CARMIL1; CCDC9B; CCNG2; CDKL5; CLSTN2; COL12A1; CREB5; DACH1; DMRTA1; EFNA1; FKBP5; FST; FUNDC1; FUT8; FZD2; GARRE1; GRHL3; HABP2; HPGD; IER3; KALRN; KCNMA1; KRT23; LAMB1; LAMC1; LURAP1L; MECOM; MPC2; MTSS1; NEBL; NELL2; NFIX; NPR3; ONECUT2; PIK3R3; PMEPA1; PPFIBP1; PRKCH; RARB; RORA; SERTAD4; SLC9A5; STARD13; TMTC2; TP63","ADAMTS6; ADD3; AMOT; ARL4C; ATP13A4; CASZ1; CREB5; EHF; GABBR1; GATA6; GPRIN3; HABP2; HES1; JUN; LRIG3; MECOM; MMP16; NECTIN4; PCDH9; RASSF5; RBPJ; SCUBE3; SERTAD4; SSX2IP; SYTL2","ADD3; ADGRA2; AFF3; AKAP1; ALCAM; AR; ARHGAP6; ATP13A4; BCL6; CA12; CASQ1; CASZ1; CLSTN2; COLCA1; CREB5; DACH1; DGKH; DHCR24; DNAJB5; EMP1; ERP27; FAT1; FBXW7; FEM1C; FOXA2; FST; FUT8; GADD45A; GLUD1; GNA12; GPRIN3; HABP2; HAL; IGDCC3; ITGB6; KRT23; KYNU; LIFR; LRP8; MALL; MAP2K6; MECOM; MPP6; NAV2; NECTIN4; NEDD4L; NEDD9; NFATC4; NFIX; NPR3; NXPH3; PER1; PFKFB4; PKHD1L1; PMEPA1; PPAN; PPARGC1A; RARB; RGL1; RNF43; RORA; SESN3; SLC22A23; SLC26A3; SYTL2; TBC1D8; TFAP4; TMEM156; TMEM164; TNFRSF19; TP63; TRIM9; TSKU; TSR1; UAP1; VSTM2L; ZFHX3; ZNF703","BOC; CCN2; CGNL1; CREB5; EHF; FBXW7; GOT1; JUN; KCNMA1; KLF5; MAP2K6; MBNL2; NFKBIA; PER1; PLCB2; PLEKHS1; RARB; RORA; SOX4; SSX2IP; STC2; TP63; ZFHX3","AMOT; ARAP2; C1orf21; DUSP6; GABBR1; GATA6; IGFBP5; JUN; LIFR; LRIG3; MECOM; ONECUT2; PHEX; PHOSPHO1; PKHD1L1; PPL; PREX1; RARB; RBPMS; SCUBE3; SERTAD4; TACC1; TNFRSF19; TSKU","ATP13A4; BCL6; EPHB6; ESR1; FBXW7; IL1R2; JUN; KLF5; KRT23; MAP2K6; MPP6; NFIX; NFKBIZ; PER1; PLCB2; PPL; RARB; SIK3; SLC40A1; SPRED1; STC2; TCF7L1; TESK2; TNFSF15; TNS2; TP63; XDH","AFF3; ANXA1; ARHGAP30; BAMBI; BUB1; FOXA2; FUT8; GPRIN3; ID1; IER3; NEDD4; NFATC4; NFIX; ONECUT2; PCDH9; PHEX; PPARGC1A; RORA; SCUBE3; SLC16A6; TFAP4; THOC5","ADAMTS6; ADD3; AFF3; AKAP1; AMOT; ARHGAP6; ARL4C; ATOH8; ATP1A1; BHLHE41; CCNG2; CREB5; EHF; EMP1; FBXW7; FGFBP3; FST; FUNDC1; FUT8; GATA6; GNRHR2; HAPLN3; IGDCC3; KLF5; KLF8; LARP1; LMCD1; LRATD1; LURAP1L; MAMDC2; MBNL2; MECOM; MGAT4A; MTMR11; NAMPT; NBL1; NEDD4; NELL2; NFATC4; NFIX; NFKBIZ; ONECUT2; PCDH9; PHEX; PHOSPHO1; PIK3R3; PISD; PLCD4; PLXDC2; PMEPA1; PPARGC1A; RAB15; RIOK1; RNF19A; RTN4; SEC14L2; SERTAD4; SIK3; SIPA1L2; SLC1A3; SPRED1; TCF7L1; TNFRSF19; TP63; VSTM2L","BIRC3; CCN2; COL16A1; DOCK4; DUSP6; EHF; GADD45B; IER3; IGDCC3; MIR17HG; NFKBIA; PIK3R3; PNKD; RASSF2; RNF43; SDC4; SLC12A2; SLC16A6; STC2; TACC1; TNFSF15; TP63; TRIB2; TSNAXIP1; ZFHX3","ADAMTS6; ADD3; ARL4C; C1orf116; CDKL5; COLCA1; DAB2; FOXA2; GATA6; HABP2; KLF9; KLHDC7A; MBNL2; MTMR11; NFIX; RARB; SLC26A3; THOC5; TNS1; ZFHX3","AKAP1; COLCA1; DACH1; FEM1C; FST; HABP2; IGDCC3; ITGB6; KRT23; LIFR; MAP2K6; NAV2; NEDD9; NFATC4; NFIX; PPARGC1A; SYTL2; TFAP4; TNFRSF19; ZFHX3; ZNF703","AMD1; ARL4C; ATOH8; C1orf116; COL16A1; COLEC12; CYRIA; DAPK1; HABP2; KLF5; MBNL2; NXPH3; ONECUT2; PHLDB1; SCGN; TFAP4; TNS1; TP63; TSKU","ARAP2; ARHGEF37; ATXN1; BCL6; C1orf21; CARMIL1; CASQ1; CCN2; CDKL5; CNST; CREB5; DMPK; EPN2; F13A1; FAM107B; GADD45B; GARRE1; HES1; HPGD; JUN; KCNJ11; KIF13A; KLF5; KYNU; LIFR; MARCHF3; MBNL2; MPP7; NEDD4; NFIX; NR4A1; PCDH9; PHEX; PLCD4; PPARGC1A; PPTC7; RGL1; RNF43; SCUBE3; SIK3; SLC12A5; SOX4; TNFSF10; TP63; TRIM14; ZFHX3","BCL6; BOC; CASZ1; CDKL5; CREB5; DUSP6; FGFBP3; FUT11; GATA3; HABP2; MBNL2; MIR17HG; NPR3; PLCD4; PPARGC1A; RARB; RNF43; SESN3; SLC20A1; SOX4; TMTC2"]},"columns":[{"accessor":"Category","name":"Category","type":"character"},{"accessor":"Number DE","name":"Number DE","type":"numeric","aggregate":"unique"},{"accessor":"Expected","name":"Expected","type":"numeric","aggregate":"unique"},{"accessor":"Gene Set Size","name":"Gene Set Size","type":"numeric","aggregate":"unique"},{"accessor":"Enrichment p","name":"Enrichment p","type":"character","aggregate":"unique"},{"accessor":"FDR","name":"FDR","type":"character","aggregate":"unique"},{"accessor":"Genes","name":"Genes","type":"character"}],"pivotBy":["Category"],"filterable":true,"defaultPageSize":25,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"8bd17e2c85538c69f86388f4f4908ad6","key":"8bd17e2c85538c69f86388f4f4908ad6"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+<pre class="r"><code>alpha &lt;- 0.01
+sigTF &lt;- genesByTF %&gt;%
+  .[dplyr::filter(tfGoseqRes, FDR &lt; alpha)$Category] %&gt;%
+  # .[dplyr::slice(tfGoseqRes, 1:15)$Category] %&gt;%
+  lapply(intersect, de) %&gt;%
+  lapply(function(x){dge$genes[x,]$gene_name}) %&gt;%
+  setNames(
+    names(.) %&gt;%
+      str_replace_all(&quot;(HALLMARK|GO|KEGG|WP)_(.+)&quot;, &quot;\\2 (\\1)&quot;) %&gt;%
+      str_replace_all(&quot;_&quot;, &quot; &quot;) %&gt;%
+      str_wrap(16)
+  )
+tfGraph &lt;- makeTidyGraph(sigTF, topTable)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotTFNetwork-1.png" alt="*Transcriptional regulatory gene-sets enriched within the DE genes to an FDR of 0.01. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.*" width="960" />
+<p class="caption">
+<em>Transcriptional regulatory gene-sets enriched within the DE genes to an FDR of 0.01. Up-regulated genes are shown in red, with down-regulated in blue. For genes, node and label size are proportional to the extent of the estimated fold-change.</em>
+</p>
+</div>
+<p>Whilst the above network plot initially appears uninformative, it can be seen that genes under regulatory control by GREB1, NFAT and AP1 appear relatively distinct</p>
+<p>This is supported by the correlation plot highlighting the trend of co-occurrence for all significant TF motifs. LEF1 and TCF4 appear to co-occur a noticeable amount, with CEBP also showing some association with CREL, MEF2 and NKX6.</p>
+<pre class="r"><code>tfGoseqRes %&gt;%
+  dplyr::filter(FDR &lt; alpha) %&gt;%
+  dplyr::select(gs_name = Category) %&gt;%
+  left_join(msigDB) %&gt;%
+  dplyr::filter(gene_id %in% de) %&gt;%
+  dplyr::mutate(is_in = TRUE) %&gt;%
+  pivot_wider(
+    id_cols = c(&quot;gs_name&quot;, &quot;gene_symbol&quot;, &quot;gene_id&quot;),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %&gt;%
+  dplyr::select(any_of(msigDB$gs_name)) %&gt;%
+  cor() %&gt;%
+  corrplot(
+    type = &quot;upper&quot;,
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = &quot;hclust&quot;,
+    addshade = &quot;all&quot;,
+    col = colorRampPalette(c(&quot;blue&quot;, &quot;white&quot;, &quot;red&quot;))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/tfCorrplot-1.png" alt="*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.01).*" width="672" />
+<p class="caption">
+<em>Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.01).</em>
+</p>
+</div>
+</div>
+<div id="up-regulated-genes-1" class="section level2">
+<h2>Up-Regulated Genes</h2>
+<pre class="r"><code>upTfGoseqRes &lt;- goseq(upPwf, gene2cat = tfByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(length(up)* numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.05</code></pre>
+<p>Given the reduced power of the smaller gene-sets used when investigating up &amp; down-regulated genes separately, an FDR of 0.05 was again chosen for this section. Using this FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.05, 76 transcriptional regulation gene sets were considered as enriched within the set of 384 previously defined up-regulated genes.</p>
+<div class="enriched-tf">
+<div class="title">
+<em>Regulatory gene-sets to an FDR of 0.05 within the set of 384 up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment.</em>
+</div>
+<div id="htmlwidget-4186b9ff98d638e5b2e8" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-4186b9ff98d638e5b2e8">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"Category":["AACTTT_UNKNOWN","HMEF2_Q6","YTATTTTNR_MEF2_02","GREB1_TARGET_GENES","CTTTGA_LEF1_Q2","TGGAAA_NFAT_Q4_01","TGANTCA_AP1_C","TAATTA_CHX10_01","FOXJ2_02","CEBP_C","HMGIY_Q6"],"Number Up":[64,9,27,35,40,57,37,28,13,12,13],"Expected":[31,2,10,16,19,31,18,12,4,3,4],"Gene Set Size":[1263,64,427,662,775,1250,727,487,151,132,156],"Enrichment p":["6.40e-06","8.54e-05","1.05e-04","1.24e-04","1.74e-04","1.85e-04","2.39e-04","3.67e-04","4.10e-04","4.13e-04","4.60e-04"],"FDR":["6.13e-03","0.030","0.030","0.030","0.030","0.030","0.033","0.040","0.040","0.040","0.040"],"Genes":["ADCY2; ADD3; AFF3; ALCAM; AMD1; ARAP2; BCL6; CAMK2D; CASZ1; CLSTN2; CNTNAP2; DGKH; DIPK2A; DOCK4; EHF; ELOVL5; FST; GLS; GRHL2; HES1; HIF1A; IMPDH1; IQGAP2; IRX3; JUN; KCNMA1; LRP8; LRRFIP2; MAFB; MARCHF3; MBOAT2; MIR17HG; MPC2; MPP6; MTSS1; MYC; NEBL; NELL2; NFKBIA; PMEPA1; PPARGC1B; PREP; PRKAB2; PRR15; RARB; RORA; SESN3; SETD7; SLC16A6; SLC22A5; SLC26A3; STARD13; STC2; TEAD1; TFAP4; THBS1; TMTC2; TNIP3; TSKU; UAP1; VSTM2L; ZBTB16; ZFHX3; ZFP36L2","ARHGEF37; JUN; MPC2; NEDD4; NFIX; NR4A1; PHOSPHO1; STARD13; TBC1D16","ARAP2; ARHGEF37; BCL6; C1orf21; CARMIL1; CASQ1; CNST; EPN2; F13A1; FAM107B; GADD45B; GARRE1; HES1; HPGD; JUN; KCNJ11; KIF13A; KLF5; LIFR; MARCHF3; NEDD4; NFIX; NR4A1; PPTC7; SIK3; TRIM14; ZFHX3","AKAP1; C1orf21; CHPT1; CORO2A; CYP1B1; DOCK4; EHF; EPN2; FAM107B; FBXO38; GCLM; GOT1; GRHL2; ID1; KDM4B; LRIG3; MCCC2; MICOS10-NBL1; NDRG1; NFKBIA; NT5DC3; PNKD; PPM1H; PRKCH; PRR15L; PRSS23; SCNN1A; SEC14L2; STC2; TBC1D16; TBC1D8; TMTC2; URB1; WWC1; ZNF689","ADD3; AFF3; AKAP1; ALCAM; ARHGAP6; ATP13A4; BCL6; CASQ1; CASZ1; CLSTN2; DGKH; DHCR24; EMP1; FST; GADD45A; GLUD1; GNA12; LIFR; LRP8; MPP6; NEDD4L; NFIX; PER1; PFKFB4; PMEPA1; PPAN; RARB; RORA; SESN3; SLC22A23; SLC26A3; TBC1D8; TFAP4; TMEM164; TSKU; TSR1; UAP1; VSTM2L; ZFHX3; ZNF703","ACACA; ADCY2; ADD3; AFF3; AMD1; ARHGAP6; BCL6; C1orf116; C1orf21; CNTNAP2; COL12A1; DOCK4; EAF2; EMP1; FAM107B; FST; FUT11; GADD45A; GADD45B; GARRE1; GATA6; GLS; HIF1A; HMGCR; IGFBP3; KCNMA1; KLF5; MIR17HG; MTSS1; NEDD4; NEDD4L; NFIX; NFKBIA; NR4A1; PNKD; PPAN; PPFIBP1; PRKCH; RANBP3L; RARB; RGS2; RORA; SASH1; SCNN1A; SERINC5; SLC16A6; SNX25; SPRED1; STARD13; TBC1D8; TEAD1; TFAP4; TMEM164; TMTC2; YAP1; ZFHX3; ZNF563","AKAP1; ARAP2; C1orf21; CNTNAP2; DOCK4; EHF; EMP1; FKBP5; FST; GADD45A; GADD45B; GADD45G; IGSF8; KLF5; KLF9; KRT15; KRT19; LAMC1; LRRFIP2; MIR17HG; NEBL; OLR1; PEA15; PFKFB2; PFKFB3; POLR3E; RBPJ; RGS2; SLC16A6; SPRED1; STARD13; STC2; THBS1; TNIP3; TSKU; TSR1; WNT7B","ADD3; AFF3; AMD1; ARHGAP6; ARRB1; BCL6; CA2; CARMIL1; CLSTN2; COL12A1; FKBP5; FST; GARRE1; HPGD; KCNMA1; LAMC1; MPC2; MTSS1; NEBL; NELL2; NFIX; PMEPA1; PPFIBP1; PRKCH; RARB; RORA; STARD13; TMTC2","ARL4C; BCL6; GARRE1; ID1; LIFR; NFIX; OLR1; OTULINL; PNKD; RARB; RORA; SERINC5; TEAD1","EHF; GOT1; JUN; KCNMA1; KLF5; NFKBIA; PER1; RARB; RORA; SSX2IP; STC2; ZFHX3","ARL4C; BCL6; C1orf116; C1orf21; KLF5; MIR17HG; MOCOS; NEDD4L; NFIX; NFKBIA; PNKD; RBPJ; TEX2"]},"columns":[{"accessor":"Category","name":"Category","type":"character"},{"accessor":"Number Up","name":"Number Up","type":"numeric","aggregate":"unique"},{"accessor":"Expected","name":"Expected","type":"numeric","aggregate":"unique"},{"accessor":"Gene Set Size","name":"Gene Set Size","type":"numeric","aggregate":"unique"},{"accessor":"Enrichment p","name":"Enrichment p","type":"character","aggregate":"unique"},{"accessor":"FDR","name":"FDR","type":"character","aggregate":"unique"},{"accessor":"Genes","name":"Genes","type":"character"}],"pivotBy":["Category"],"filterable":true,"defaultPageSize":25,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"66d3a04849241e9a537def729e327477","key":"66d3a04849241e9a537def729e327477"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+<pre class="r"><code>sigTF &lt;- genesByTF %&gt;%
+  .[dplyr::filter(upTfGoseqRes, FDR &lt; alpha)$Category] %&gt;%
+  lapply(intersect, up) %&gt;%
+  lapply(function(x){dge$genes[x,]$gene_name}) %&gt;%
+  setNames(
+    names(.) %&gt;%
+      str_replace_all(&quot;(HALLMARK|GO|KEGG|WP)_(.+)&quot;, &quot;\\2 (\\1)&quot;) %&gt;%
+      str_replace_all(&quot;_&quot;, &quot; &quot;) %&gt;%
+      str_wrap(16)
+  )
+tfGraph &lt;- makeTidyGraph(sigTF, topTable)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotUpTFNetwork-1.png" alt="*Transcriptional regulatory gene-sets enriched within the 384 up-regulated genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change.*" width="960" />
+<p class="caption">
+<em>Transcriptional regulatory gene-sets enriched within the 384 up-regulated genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change.</em>
+</p>
+</div>
+<p>The distinct patterns of regulation by GREB1 and LEF1 were noticeable in both the above network plot and the correlations.</p>
+<pre class="r"><code>upTfGoseqRes %&gt;%
+  dplyr::filter(FDR &lt; alpha) %&gt;%
+  dplyr::select(gs_name = Category) %&gt;%
+  left_join(msigDB) %&gt;%
+  dplyr::filter(gene_id %in% up) %&gt;%
+  dplyr::mutate(is_in = TRUE) %&gt;%
+  pivot_wider(
+    id_cols = c(&quot;gs_name&quot;, &quot;gene_symbol&quot;, &quot;gene_id&quot;),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %&gt;%
+  dplyr::select(any_of(msigDB$gs_name)) %&gt;%
+  cor() %&gt;%
+  corrplot(
+    type = &quot;upper&quot;,
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = &quot;hclust&quot;,
+    addshade = &quot;all&quot;,
+    col = colorRampPalette(c(&quot;blue&quot;, &quot;white&quot;, &quot;red&quot;))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/tfUpCorrplot-1.png" alt="*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.05) in up-regulated genes.*" width="672" />
+<p class="caption">
+<em>Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.05) in up-regulated genes.</em>
+</p>
+</div>
+</div>
+<div id="down-regulated-genes-1" class="section level2">
+<h2>Down-Regulated Genes</h2>
+<pre class="r"><code>downTfGoseqRes &lt;- goseq(downPwf, gene2cat = tfByGene) %&gt;%
+  as_tibble() %&gt;%
+  dplyr::mutate(
+    Expected = round(length(down)* numInCat / nrow(topTable), 0),
+    FDR = p.adjust(over_represented_pvalue, &quot;BH&quot;)
+  ) %&gt;%
+  dplyr::select(
+    Category = category, 
+    `Number DE` = numDEInCat,
+    Expected,
+    `Gene Set Size` = numInCat,
+    `Enrichment p` = over_represented_pvalue,
+    FDR
+  ) 
+alpha &lt;- 0.05</code></pre>
+<p>Given the reduced power of the smaller gene-sets used when investigating up &amp; down-regulated genes separately, an FDR of 0.05 was again chosen for this section. Using this FDR threshold of <span class="math inline">\(\alpha =\)</span> 0.05, 76 transcriptional regulation gene sets were considered as enriched within the set of 472 previously defined down-regulated genes.</p>
+<div class="enriched-tf">
+<div class="title">
+<em>Regulatory gene-sets to an FDR of 0.05 within the set of 384 up-regulated genes. Up-regulated Genes associated with each gene-set are shown in the final column. 'Expected' indicates how many genes would have been expected if there was no enrichment.</em>
+</div>
+<div id="htmlwidget-311482c9f2e83cce3fc5" class="reactable html-widget" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-311482c9f2e83cce3fc5">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"Category":["HNF3B_01","ICSBP_Q6","TCF4_Q5","CTTTAAR_UNKNOWN","CEBP_Q2_01","GATA_C","TGGAAA_NFAT_Q4_01","IRF_Q6"],"Number Down":[14,16,14,38,16,14,62,14],"Expected":[4,5,4,20,5,4,38,5],"Gene Set Size":[126,168,141,649,181,146,1250,153],"Enrichment p":["1.25e-04","1.66e-04","1.71e-04","1.97e-04","2.70e-04","3.10e-04","3.19e-04","3.62e-04"],"FDR":["0.043","0.043","0.043","0.043","0.043","0.043","0.043","0.043"],"Genes":["ANXA1; ARHGAP30; BAMBI; BUB1; FOXA2; FUT8; GPRIN3; IER3; NFATC4; ONECUT2; PCDH9; PHEX; PPARGC1A; SCUBE3","CABLES1; CCDC148; DAPP1; DDB2; ESR1; FUT8; KYNU; LURAP1L; MAP2K6; MGAT4A; NPR3; PIK3R3; PPARGC1A; SP110; TNFRSF19; TNFSF15","COLCA1; DACH1; FEM1C; HABP2; IGDCC3; ITGB6; KRT23; MAP2K6; NAV2; NEDD9; NFATC4; PPARGC1A; SYTL2; TNFRSF19","ADAMTS6; BHLHE41; CCNG2; CREB5; FBXW7; FGFBP3; FUNDC1; FUT8; GNRHR2; HAPLN3; IGDCC3; KLF8; LMCD1; LRATD1; LURAP1L; MAMDC2; MBNL2; MECOM; MGAT4A; MTMR11; NFATC4; NFKBIZ; ONECUT2; PCDH9; PHEX; PIK3R3; PLCD4; PLXDC2; PPARGC1A; RAB15; RNF19A; RTN4; SERTAD4; SIPA1L2; SLC1A3; TCF7L1; TNFRSF19; TP63","EPHB6; ESR1; FBXW7; IL1R2; KRT23; MAP2K6; NFKBIZ; PLCB2; PPL; SLC40A1; TCF7L1; TESK2; TNFSF15; TNS2; TP63; XDH","DUSP6; GABBR1; IGFBP5; MECOM; ONECUT2; PHEX; PKHD1L1; PPL; PREX1; RBPMS; SCUBE3; SERTAD4; TACC1; TNFRSF19","ALS2CL; AREG; ATP1B1; ATXN1; BMP4; CABLES1; CAMK2G; CCDC148; CCN2; CNR1; COL16A1; COLEC12; CREB5; DAB2; DHRS3; ESR1; FANK1; FBXW7; FHDC1; GATA3; GCNT2; GRHL3; IER3; IGFBP5; IGSF3; KLF8; KYNU; LURAP1L; MBNL2; MECOM; MTMR11; NANOS1; NFATC4; NPR3; PAK3; PDE4B; PDLIM3; PHEX; PHLDB1; PIK3R3; PPARGC1A; PRELP; PTCHD1; RASSF2; RNF19A; RNF43; SCUBE3; SDC4; SERPINI1; SERTAD4; SSTR5-AS1; SYTL4; TIAM1; TNFRSF19; TNFSF10; TNS1; TRIB2; UNC5C; VCAN; VEGFC; ZNF385A; ZNF431","DAPP1; ESR1; FUT8; KLHDC7A; KYNU; LURAP1L; MYB; NPR3; PLEKHH2; RTN4; SLC40A1; TNFSF15; ZCCHC24; ZNF385A"]},"columns":[{"accessor":"Category","name":"Category","type":"character"},{"accessor":"Number Down","name":"Number Down","type":"numeric","aggregate":"unique"},{"accessor":"Expected","name":"Expected","type":"numeric","aggregate":"unique"},{"accessor":"Gene Set Size","name":"Gene Set Size","type":"numeric","aggregate":"unique"},{"accessor":"Enrichment p","name":"Enrichment p","type":"character","aggregate":"unique"},{"accessor":"FDR","name":"FDR","type":"character","aggregate":"unique"},{"accessor":"Genes","name":"Genes","type":"character"}],"pivotBy":["Category"],"filterable":true,"defaultPageSize":25,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPageInfo":true,"minRows":1,"dataKey":"2ada496bc4a0c5239e71958f46406099","key":"2ada496bc4a0c5239e71958f46406099"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+</div>
+<pre class="r"><code>alpha &lt;- 0.05
+minSize &lt;- 5
+sigTF &lt;- genesByTF %&gt;%
+  .[dplyr::filter(downTfGoseqRes, FDR &lt; alpha)$Category] %&gt;%
+  lapply(intersect, down) %&gt;%
+  lapply(function(x){dge$genes[x,]$gene_name}) %&gt;%
+  setNames(
+    names(.) %&gt;%
+      str_replace_all(&quot;(HALLMARK|GO|KEGG|WP)_(.+)&quot;, &quot;\\2 (\\1)&quot;) %&gt;%
+      str_replace_all(&quot;_&quot;, &quot; &quot;) %&gt;%
+      str_wrap(16)
+  ) %&gt;%
+  .[vapply(., length, integer(1)) &gt;= minSize]
+tfGraph &lt;- makeTidyGraph(sigTF, topTable)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotDownTFNetwork-1.png" alt="*Transcriptional regulatory gene-sets enriched within the 472 down-regulated genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change.*" width="960" />
+<p class="caption">
+<em>Transcriptional regulatory gene-sets enriched within the 472 down-regulated genes to an FDR of 0.05. For genes, node and label size are proportional to the extent of the estimated fold-change.</em>
+</p>
+</div>
+<ul>
+<li>CEBP_Q2 and NFATQ4 appear to capture distinct sets of genes</li>
+<li>ICSBP_Q6 and IRF_Q6 appear to capture more common sets of genes</li>
+</ul>
+<pre class="r"><code>downTfGoseqRes %&gt;%
+  dplyr::filter(FDR &lt; alpha) %&gt;%
+  dplyr::select(gs_name = Category) %&gt;%
+  left_join(msigDB) %&gt;%
+  dplyr::filter(gene_id %in% down) %&gt;%
+  dplyr::mutate(is_in = TRUE) %&gt;%
+  pivot_wider(
+    id_cols = c(&quot;gs_name&quot;, &quot;gene_symbol&quot;, &quot;gene_id&quot;),
+    names_from = gs_name,
+    values_from = is_in,
+    values_fill = FALSE
+  ) %&gt;%
+  dplyr::select(any_of(msigDB$gs_name)) %&gt;%
+  cor() %&gt;%
+  corrplot(
+    type = &quot;upper&quot;,
+    diag = FALSE, 
+    addCoef.col = rgb(0, 0, 0, 0.6),
+    addCoefasPercent = TRUE,
+    order = &quot;hclust&quot;,
+    addshade = &quot;all&quot;,
+    col = colorRampPalette(c(&quot;blue&quot;, &quot;white&quot;, &quot;red&quot;))(100), 
+    tl.cex = 0.7, 
+    number.cex = 0.7
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/tfDownCorrplot-1.png" alt="*Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.05) in down-regulated genes.*" width="672" />
+<p class="caption">
+<em>Correlation plot indicating co-occurence between all enriched transcription factor motifs (FDR &lt; 0.05) in down-regulated genes.</em>
+</p>
+</div>
+</div>
+<div id="combined-up-and-down-regulated-results-1" class="section level2">
+<h2>Combined Up And Down-Regulated Results</h2>
+<pre class="r"><code>alpha &lt;- 0.05</code></pre>
+<pre class="r"><code>bind_rows(
+  upTfGoseqRes %&gt;% mutate(Direction = &quot;Up&quot;),
+  downTfGoseqRes %&gt;% mutate(Direction = &quot;Down&quot;)
+) %&gt;%
+  group_by(Category) %&gt;%
+  dplyr::filter(min(FDR) &lt; alpha &amp; min(`Enrichment p`) &lt; 0.001) %&gt;%
+  arrange(mean(1/ `Enrichment p`, na.rm = TRUE)) %&gt;%
+  ungroup() %&gt;%
+  mutate(Category = fct_inorder(Category)) %&gt;%
+  ggplot(aes(Category, -log10(`Enrichment p`), fill = Direction)) +
+  geom_col(position = &quot;dodge&quot;) +
+  geom_hline(yintercept = 3, linetype = 2) +
+  coord_flip() +
+  labs(y = expression(paste(log[10], &quot;p&quot;))) +
+  scale_y_continuous(expand = expansion(c(0, 0.05))) +
+  scale_fill_manual(
+    values = c(&quot;#0000FFB3&quot;, &quot;#FF0000B3&quot;)
+  ) +
+  theme(
+    legend.position = c(1, 1)*0.99,
+    legend.justification = c(1, 1)
+  )</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/dge_enrichment.Rmd/plotDirectionalTFP-1.png" alt="*Comparison of p-values for directional enrichment. Only gene-sets with an FDR-adjusted p-value &lt; 0.05 are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. All gene-sets were considered significant in the non-directional analysis.*" width="960" />
+<p class="caption">
+<em>Comparison of p-values for directional enrichment. Only gene-sets with an FDR-adjusted p-value &lt; 0.05 are shown. The vertical black line indicates a raw p-value of 0.001 as results which fail to acheive this value are usually non-significant. All gene-sets were considered significant in the non-directional analysis.</em>
+</p>
+</div>
+<p>A comparison of the p-values obtained from the individual directional analysis revealed:</p>
+<ul>
+<li>Both AP1 and NFAT regulated genes appear to have no directional bias</li>
+<li>GREB1, LEF1 and CHX10 regulated genes appear slightly biased towards up-regulation</li>
+<li>Most other gene-sets have a bias to either up (e.g. AACTTT_UNKNOWN, HMEF2) or down (e.g. ICSBP, IRF, TCF4) regulation</li>
+</ul>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.0.2 (2020-06-22)
+Platform: x86_64-pc-linux-gnu (64-bit)
+Running under: Ubuntu 18.04.5 LTS
+
+Matrix products: default
+BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.7.1
+LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.7.1
+
+locale:
+ [1] LC_CTYPE=en_AU.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_AU.UTF-8        LC_COLLATE=en_AU.UTF-8    
+ [5] LC_MONETARY=en_AU.UTF-8    LC_MESSAGES=en_AU.UTF-8   
+ [7] LC_PAPER=en_AU.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_AU.UTF-8 LC_IDENTIFICATION=C       
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] corrplot_0.84          ggraph_2.0.3           tidygraph_1.2.0       
+ [4] htmltools_0.5.0        reactable_0.2.3        goseq_1.40.0          
+ [7] geneLenDataBase_1.24.0 BiasedUrn_1.07         msigdbr_7.2.1         
+[10] DT_0.15                ggrepel_0.8.2          magrittr_1.5          
+[13] cowplot_1.1.0          edgeR_3.30.3           limma_3.44.3          
+[16] glue_1.4.2             pander_0.6.3           scales_1.1.1          
+[19] yaml_2.2.1             forcats_0.5.0          stringr_1.4.0         
+[22] dplyr_1.0.2            purrr_0.3.4            readr_1.4.0           
+[25] tidyr_1.1.2            tibble_3.0.3           ggplot2_3.3.2         
+[28] tidyverse_1.3.0        workflowr_1.6.2       
+
+loaded via a namespace (and not attached):
+  [1] readxl_1.3.1                backports_1.1.10           
+  [3] BiocFileCache_1.12.1        plyr_1.8.6                 
+  [5] igraph_1.2.6                splines_4.0.2              
+  [7] crosstalk_1.1.0.1           BiocParallel_1.22.0        
+  [9] usethis_1.6.3               GenomeInfoDb_1.24.2        
+ [11] digest_0.6.25               viridis_0.5.1              
+ [13] GO.db_3.11.4                fansi_0.4.1                
+ [15] memoise_1.1.0               remotes_2.2.0              
+ [17] Biostrings_2.56.0           graphlayouts_0.7.0         
+ [19] modelr_0.1.8                matrixStats_0.57.0         
+ [21] askpass_1.1                 prettyunits_1.1.1          
+ [23] colorspace_1.4-1            blob_1.2.1                 
+ [25] rvest_0.3.6                 rappdirs_0.3.1             
+ [27] haven_2.3.1                 xfun_0.18                  
+ [29] callr_3.4.4                 crayon_1.3.4               
+ [31] RCurl_1.98-1.2              jsonlite_1.7.1             
+ [33] polyclip_1.10-0             gtable_0.3.0               
+ [35] zlibbioc_1.34.0             XVector_0.28.0             
+ [37] DelayedArray_0.14.1         pkgbuild_1.1.0             
+ [39] BiocGenerics_0.34.0         DBI_1.1.0                  
+ [41] Rcpp_1.0.5                  viridisLite_0.3.0          
+ [43] progress_1.2.2              bit_4.0.4                  
+ [45] stats4_4.0.2                htmlwidgets_1.5.2          
+ [47] httr_1.4.2                  ellipsis_0.3.1             
+ [49] pkgconfig_2.0.3             XML_3.99-0.5               
+ [51] farver_2.0.3                dbplyr_1.4.4               
+ [53] locfit_1.5-9.4              here_0.1                   
+ [55] labeling_0.3                tidyselect_1.1.0           
+ [57] rlang_0.4.7                 later_1.1.0.1              
+ [59] AnnotationDbi_1.50.3        reactR_0.4.3               
+ [61] munsell_0.5.0               cellranger_1.1.0           
+ [63] tools_4.0.2                 cli_2.0.2                  
+ [65] generics_0.0.2              RSQLite_2.2.1              
+ [67] devtools_2.3.2              broom_0.7.1                
+ [69] evaluate_0.14               processx_3.4.4             
+ [71] knitr_1.30                  bit64_4.0.5                
+ [73] fs_1.5.0                    nlme_3.1-149               
+ [75] whisker_0.4                 xml2_1.3.2                 
+ [77] biomaRt_2.44.1              compiler_4.0.2             
+ [79] rstudioapi_0.11             curl_4.3                   
+ [81] testthat_2.3.2              reprex_0.3.0               
+ [83] tweenr_1.0.1                stringi_1.5.3              
+ [85] highr_0.8                   ps_1.3.4                   
+ [87] GenomicFeatures_1.40.1      desc_1.2.0                 
+ [89] lattice_0.20-41             Matrix_1.2-18              
+ [91] vctrs_0.3.4                 pillar_1.4.6               
+ [93] lifecycle_0.2.0             bitops_1.0-6               
+ [95] httpuv_1.5.4                rtracklayer_1.48.0         
+ [97] GenomicRanges_1.40.0        R6_2.4.1                   
+ [99] promises_1.1.1              gridExtra_2.3              
+[101] IRanges_2.22.2              sessioninfo_1.1.1          
+[103] MASS_7.3-53                 assertthat_0.2.1           
+[105] pkgload_1.1.0               SummarizedExperiment_1.18.2
+[107] openssl_1.4.3               rprojroot_1.3-2            
+[109] withr_2.3.0                 GenomicAlignments_1.24.0   
+[111] Rsamtools_2.4.0             S4Vectors_0.26.1           
+[113] GenomeInfoDbData_1.2.3      mgcv_1.8-33                
+[115] parallel_4.0.2              hms_0.5.3                  
+[117] grid_4.0.2                  rmarkdown_2.4              
+[119] git2r_0.27.1                ggforce_0.3.2              
+[121] Biobase_2.48.0              lubridate_1.7.9            </code></pre>
+</div>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+http://docs.mathjax.org/en/latest/configuration.html.  This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
