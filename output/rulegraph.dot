@@ -1,0 +1,60 @@
+digraph snakemake_dag {
+    graph[bgcolor=white, margin=0];
+    node[shape=box, style=rounded, fontname=sans,                 fontsize=10, penwidth=2];
+    edge[penwidth=2, color=grey];
+	0[label = "all", color = "0.59 0.6 0.85", style="rounded"];
+	1[label = "adapter_removal", color = "0.07 0.6 0.85", style="rounded"];
+	2[label = "trim_fastqc", color = "0.00 0.6 0.85", style="rounded"];
+	3[label = "raw_fastqc", color = "0.33 0.6 0.85", style="rounded"];
+	4[label = "index_bam", color = "0.37 0.6 0.85", style="rounded"];
+	5[label = "star_index", color = "0.56 0.6 0.85", style="rounded"];
+	6[label = "build_wflow_site_index", color = "0.15 0.6 0.85", style="rounded"];
+	7[label = "make_rulegraph", color = "0.41 0.6 0.85", style="rounded"];
+	8[label = "build_qc_raw", color = "0.04 0.6 0.85", style="rounded"];
+	9[label = "build_wflow_description", color = "0.52 0.6 0.85", style="rounded"];
+	10[label = "get_genome", color = "0.30 0.6 0.85", style="rounded"];
+	11[label = "count", color = "0.44 0.6 0.85", style="rounded"];
+	12[label = "get_annotation", color = "0.26 0.6 0.85", style="rounded"];
+	13[label = "star_se", color = "0.19 0.6 0.85", style="rounded"];
+	14[label = "make_rproj", color = "0.63 0.6 0.85", style="rounded"];
+	15[label = "build_qc_aligned", color = "0.22 0.6 0.85", style="rounded"];
+	16[label = "build_qc_trimmed", color = "0.48 0.6 0.85", style="rounded"];
+	17[label = "build_dge_analysis", color = "0.11 0.6 0.85", style="rounded"];
+	2 -> 0
+	6 -> 0
+	10 -> 0
+	3 -> 0
+	4 -> 0
+	12 -> 0
+	7 -> 0
+	11 -> 0
+	8 -> 0
+	5 -> 0
+	9 -> 0
+	1 -> 0
+	1 -> 2
+	13 -> 4
+	12 -> 5
+	10 -> 5
+	14 -> 6
+	17 -> 6
+	16 -> 6
+	9 -> 6
+	8 -> 6
+	15 -> 6
+	14 -> 8
+	3 -> 8
+	7 -> 9
+	14 -> 9
+	13 -> 11
+	12 -> 11
+	5 -> 13
+	1 -> 13
+	11 -> 15
+	13 -> 15
+	14 -> 15
+	2 -> 16
+	14 -> 16
+	15 -> 17
+	14 -> 17
+}            
