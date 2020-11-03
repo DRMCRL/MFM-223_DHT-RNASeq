@@ -1,6 +1,6 @@
 ---
 title: "Home"
-author: "Stephen Pederson"
+author: "Stephen Pederson<br>Dame Roma Mitchell Cancer Research Laboratories<br>Adelaide Medical School<br>University of Adelaide"
 date: "`r format(Sys.Date(), '%d %B, %Y')`"
 site: workflowr::wflow_site
 output:
@@ -9,4 +9,12 @@ output:
 editor_options:
   chunk_output_type: console
 ---
+
+Complete processing and analysis of RNA-Seq data from MFM-223 cells.
+
+- Cells were treated with DHT or with Empty Vehicle.
+- Sequencing was performed by the Genomics Core Facility in Cambridge (CRUK CI)
+- Sequencing data was generated on 19th June, 2013 (20131906) 
+
+As seen in the menus above, pre-processing was performed using an automated `snakemake` workflow, with subsequent analysis performed manually in R
 
