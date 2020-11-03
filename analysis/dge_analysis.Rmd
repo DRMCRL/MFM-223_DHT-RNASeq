@@ -820,7 +820,7 @@ topTable %>%
   )
 ```
 
-In addition, the final `DGEList` was exported for easier integration with subsequent analyses
+In addition, the final `DGEList` was exported for easier integration with subsequent analyses, as were the CPM values for all detected genes
 
 ```{r exportDGE}
 write_rds(
@@ -829,3 +829,11 @@ write_rds(
 )
 ```
 
+```{r exportCPM}
+cpm(dge) %>%
+  as.data.frame() %>%
+  rownames_to_column("gene_id") %>%
+  mutate(gene_name = dge$genes$gene_name) %>%
+  dplyr::select(starts_with("gene"), everything()) %>%
+  write_tsv("output/MFM-223_CPM.tsv")
+```
