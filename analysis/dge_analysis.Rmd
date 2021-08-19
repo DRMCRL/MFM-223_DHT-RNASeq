@@ -515,6 +515,10 @@ pcaPost %>%
     colour = "Replicate",
     shape = "Treatment"
   )
+ggsave(
+  here::here("docs/assets/pcaPost.pdf"),
+  height = 8, width = 8, units = "in"
+)
 ```
 
 
