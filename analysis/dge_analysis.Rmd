@@ -49,6 +49,10 @@ sp <- config$ref$species %>%
   str_to_title()
 ```
 
+```{r}
+if (!dir.exists(here::here("docs/assets"))) dir.create(here::here("docs/assets"))
+```
+
 
 # Setup
 
@@ -644,6 +648,11 @@ topTable %>%
   theme(
     legend.position = "none"
   )
+ggsave(
+  here::here("docs/assets/plotMA.pdf"),
+  width = 10, height = 6,
+  units = "in"
+)
 ```
 
 
@@ -671,6 +680,11 @@ topTable %>%
   theme(
     legend.position = "none"
   )
+ggsave(
+  here::here("docs/assets/plotVolcano.pdf"),
+  width = 10, height = 8,
+  units = "in"
+)
 ```
 
 
