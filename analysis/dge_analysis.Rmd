@@ -716,7 +716,7 @@ topTable %>%
   dplyr::select(gene_id, gene_name) %>%
   mutate(gene_name = fct_inorder(gene_name)) %>%
   cbind(
-    cpm(dge, log = TRUE)[.$gene_id,]
+    logCPM[.$gene_id,]
   ) %>%
   pivot_longer(
     any_of(colnames(dge)),
@@ -740,7 +740,7 @@ topTable %>%
   dplyr::select(gene_id, gene_name) %>%
   mutate(gene_name = fct_inorder(gene_name)) %>%
   cbind(
-    cpm(dge, log = TRUE)[.$gene_id,]
+    logCPM[.$gene_id,]
   ) %>%
   pivot_longer(
     any_of(colnames(dge)),
@@ -844,7 +844,7 @@ write_rds(
 ```
 
 ```{r exportCPM}
-cpm(dge) %>%
+2^logCPM %>% 
   as.data.frame() %>%
   rownames_to_column("gene_id") %>%
   mutate(gene_name = dge$genes$gene_name) %>%
